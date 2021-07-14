@@ -1,0 +1,24 @@
+{
+    "logging": {
+        "severity": "DEBUG",
+        "discord": {
+            "enable": true,
+            "severity": "WARNING",
+            "webhookUrl": "https://discord.com/api/webhooks/XXXXX/XXXXX"
+        }
+    },
+    "discord": {
+        "username": "Renovate",
+        "avatarUrl": "https://i.imgur.com/bNGKmG0.png",
+        "webhookUrl": "https://discord.com/api/webhooks/XXXXX/XXXXX"
+    },
+    "titles": {
+        "prospero": [
+            "PPSA01922",
+            "PPSA01628",
+            "PPSA01327",
+            "PPSA01343",
+            "PPSA01981"
+        ]
+    }
+}
