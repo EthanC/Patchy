@@ -125,8 +125,6 @@ class Renovate:
         )
 
         if (data is None) or (data["success"] is False):
-            logger.error(f"Failed to get current version for Prospero title {titleId}")
-
             return
 
         name: str = data["metadata"]["name"]

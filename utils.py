@@ -12,7 +12,12 @@ class Utility:
     def GET(self: Any, url: str) -> Optional[Dict[str, Any]]:
         """Perform an HTTP GET request and return its response."""
 
-        res: Response = httpx.get(url)
+        try:
+            res: Response = httpx.get(url)
+        except Exception as e:
+            logger.error(f"GET failed {url}, {e}")
+
+            return
 
         status: int = res.status_code
         data: str = res.text
@@ -24,7 +29,7 @@ class Utility:
             return json.loads(data)
         else:
             logger.error(f"(HTTP {status}) GET Failed {url}")
-            logger.error(data)
+            logger.trace(data)
 
     def POST(self: Any, url: str, payload: Dict[str, Any]) -> bool:
         """Perform an HTTP POST request and return its status."""
