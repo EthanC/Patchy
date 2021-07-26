@@ -18,8 +18,8 @@ python renovate.py
 
 ### Supported Platforms
 
--   Battle.net ([Battle](https://blizztrack.com/))
--   PlayStation 5 ([Prospero](https://prosperopatches.com/))
+-   Battle.net (`battle`)
+-   PlayStation 5 (`prospero`)
 
 ## Credits
 
