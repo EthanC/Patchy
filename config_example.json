@@ -13,6 +13,11 @@
         "webhookUrl": "https://discord.com/api/webhooks/XXXXX/XXXXX"
     },
     "titles": {
+        "battle": [
+            { "titleId": "zeus", "region": "Americas" },
+            { "titleId": "lazr", "region": "Americas" },
+            { "titleId": "odin", "region": "Americas" }
+        ],
         "prospero": [
             "PPSA01922",
             "PPSA01628",

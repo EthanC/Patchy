@@ -29,6 +29,10 @@ class Renovate:
         self.history: Dict[str, Any] = Renovate.LoadHistory(self)
         self.changed: bool = False
 
+        # Battle.net
+        for title in self.config["titles"]["battle"]:
+            Renovate.ProcessBattleTitle(self, title)
+
         # PlayStation 5
         for title in self.config["titles"]["prospero"]:
             Renovate.ProcessProsperoTitle(self, title)
@@ -100,7 +104,7 @@ class Renovate:
             with open("history.json", "r") as file:
                 history: Dict[str, Any] = json.loads(file.read())
         except FileNotFoundError:
-            history: Dict[str, Any] = {"prospero": {}}
+            history: Dict[str, Any] = {"battle": {}, "prospero": {}}
 
             logger.success("Title history not found, created empty file")
         except Exception as e:
@@ -108,9 +112,92 @@ class Renovate:
 
             exit(1)
 
+        if history.get("battle") is None:
+            history["battle"] = {}
+
+        if history.get("prospero") is None:
+            history["prospero"] = {}
+
         logger.success("Loaded title history")
 
         return history
+
+    def ProcessBattleTitle(self: Any, title: Dict[str, str]) -> None:
+        """
+        Get the current version of the specified Battle.net title and
+        determine whether or not it has updated.
+        """
+
+        titleId: str = title["titleId"]
+        region: str = title["region"]
+
+        past: Optional[str] = self.history["battle"].get(titleId)
+
+        data: Optional[Dict[str, Any]] = Utility.GET(
+            self, f"https://blizztrack.com/api/manifest/versions/{titleId}"
+        )
+
+        if data is None:
+            return
+
+        titleId = data["product"]
+        name: str = data["name"]
+        current: str = data["data"][0]["versionsname"]
+        build: str = data["data"][0]["buildconfig"]
+
+        # Try to select desired region, otherwise default to first
+        for entry in data["data"]:
+            if entry["region_name"].lower() == region.lower():
+                region = entry["region_name"]
+                current = entry["versionsname"]
+                build = entry["buildconfig"]
+
+        if past is None:
+            self.history["battle"][titleId] = current
+            self.changed = True
+
+            logger.success(
+                f"Battle.net title {name} previously untracked, saved version {current} to title history"
+            )
+
+            return
+        elif past == current:
+            logger.info(f"Battle.net title {name} not updated ({current})")
+
+            return
+
+        logger.success(f"Battle.net title {name} updated, {past} -> {current}")
+
+        thumbnail: Optional[str] = None
+        for image in data["logos"]:
+            if image["type"] == "image/png":
+                thumbnail = image["url"]
+
+                break
+
+        success: bool = Renovate.Notify(
+            self,
+            {
+                "name": name,
+                "url": f"https://blizztrack.com/v/{titleId}/versions",
+                "timestamp": data["indexed"],
+                "platformColor": "148EFF",
+                "region": region,
+                "titleId": titleId,
+                "platformLogo": "https://i.imgur.com/dI6bDr7.png",
+                "thumbnail": thumbnail,
+                "pastVersion": past,
+                "currentVersion": current,
+                "build": None
+                if data["encrypted"] is True
+                else Utility.GetBattleBuild(self, titleId, region, build),
+            },
+        )
+
+        # Ensure no changes go without notification
+        if success is True:
+            self.history["battle"][titleId] = current
+            self.changed = True
 
     def ProcessProsperoTitle(self: Any, titleId: str) -> None:
         """
@@ -146,47 +233,52 @@ class Renovate:
 
         logger.success(f"Prospero title {name} updated, {past} -> {current}")
 
-        # Prepare data for Discord embed
-        data["metadata"]["titleId"] = titleId
-        data["metadata"]["pastVersion"] = past
-        data["metadata"]["platformLogo"] = "https://i.imgur.com/ccNqLcb.png"
-        data["metadata"]["platformColor"] = "00439C"
-        data["metadata"]["url"] = f"https://prosperopatches.com/{titleId}"
-
-        # Discord does not support webp images in embeds at this time
-        data["metadata"].pop("background")
-        data["metadata"].pop("icon")
-
-        success: bool = Renovate.Notify(self, data["metadata"])
+        success: bool = Renovate.Notify(
+            self,
+            {
+                "name": name,
+                "url": f"https://prosperopatches.com/{titleId}",
+                "platformColor": "00439C",
+                "region": data["metadata"]["region"],
+                "titleId": titleId,
+                "platformLogo": "https://i.imgur.com/ccNqLcb.png",
+                "thumbnail": data["metadata"]["icon"],
+                "image": data["metadata"]["background"],
+                "pastVersion": past,
+                "currentVersion": current,
+            },
+        )
 
         # Ensure no changes go without notification
         if success is True:
             self.history["prospero"][titleId] = current
             self.changed = True
 
-    def Notify(self: Any, data: Dict[str, Any]) -> bool:
+    def Notify(self: Any, data: Dict[str, str]) -> bool:
         """Report title version change to the configured Discord webhook."""
 
         settings: Dict[str, Any] = self.config["discord"]
 
-        name: str = data["name"]
         region: str = data["region"]
+        titleId: str = data["titleId"]
 
         payload: Dict[str, Any] = {
             "username": settings["username"],
             "avatar_url": settings["avatarUrl"],
             "embeds": [
                 {
-                    "title": f"{name} ({region})",
+                    "title": data["name"],
                     "url": data.get("url"),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.utcnow().isoformat()
+                    if (timestamp := data.get("timestamp")) is None
+                    else timestamp,
                     "color": int(data["platformColor"], base=16),
                     "footer": {
-                        "text": data["titleId"],
+                        "text": f"({region}) {titleId}",
                         "icon_url": data["platformLogo"],
                     },
-                    "image": data.get("background"),
-                    "thumbnail": data.get("icon"),
+                    "thumbnail": {"url": data.get("thumbnail")},
+                    "image": {"url": data.get("image")},
                     "author": {
                         "name": "Renovate",
                         "url": "https://github.com/EthanC/Renovate",
@@ -208,10 +300,20 @@ class Renovate:
             ],
         }
 
+        if (build := data.get("build")) is not None:
+            payload["embeds"][0]["fields"].append(
+                {"name": "Build Name", "value": f"`{build}`"}
+            )
+
         return Utility.POST(self, settings["webhookUrl"], payload)
 
     def SaveHistory(self: Any) -> None:
         """Save the latest title versions to history.json"""
+
+        if self.config.get("debug") is True:
+            logger.warning("Debug is active, not saving title history")
+
+            return
 
         try:
             with open("history.json", "w+") as file:

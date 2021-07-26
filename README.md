@@ -1,9 +1,9 @@
 # Renovate
 
-Renovate is a PlayStation title watcher that reports updates via Discord.
+Renovate is a Battle.net and PlayStation 5 title watcher that reports updates via Discord.
 
 <p align="center">
-    <img src="https://i.imgur.com/IHrUjAh.png" draggable="false">
+    <img src="https://i.imgur.com/qEimihY.png" draggable="false">
 </p>
 
 ## Usage
@@ -18,8 +18,10 @@ python renovate.py
 
 ### Supported Platforms
 
+-   Battle.net ([Battle](https://blizztrack.com/))
 -   PlayStation 5 ([Prospero](https://prosperopatches.com/))
 
 ## Credits
 
+-   [Helba](https://twitter.com/helba_the_ai): [BlizzTrack.com](https://blizztrack.com/)
 -   [0x199](https://twitter.com/0x199): [PROSPEROPatches.com](https://prosperopatches.com/)
