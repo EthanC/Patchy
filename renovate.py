@@ -11,7 +11,8 @@ from utils import Utility
 
 class Renovate:
     """
-    Renovate is a PlayStation title watcher that reports updates via Discord.
+    Renovate is a Battle.net and PlayStation title watcher that reports
+    updates via Discord.
 
     https://github.com/EthanC/Renovate
     """
@@ -36,6 +37,10 @@ class Renovate:
         # PlayStation 5
         for title in self.config["titles"]["prospero"]:
             Renovate.ProcessProsperoTitle(self, title)
+
+        # PlayStation 4
+        for title in self.config["titles"]["orbis"]:
+            Renovate.ProcessOrbisTitle(self, title)
 
         if self.changed is True:
             Renovate.SaveHistory(self)
@@ -104,7 +109,7 @@ class Renovate:
             with open("history.json", "r") as file:
                 history: Dict[str, Any] = json.loads(file.read())
         except FileNotFoundError:
-            history: Dict[str, Any] = {"battle": {}, "prospero": {}}
+            history: Dict[str, Any] = {"battle": {}, "prospero": {}, "orbis": {}}
 
             logger.success("Title history not found, created empty file")
         except Exception as e:
@@ -117,6 +122,9 @@ class Renovate:
 
         if history.get("prospero") is None:
             history["prospero"] = {}
+
+        if history.get("prospero") is None:
+            history["orbis"] = {}
 
         logger.success("Loaded title history")
 
@@ -211,7 +219,7 @@ class Renovate:
             self, f"https://prosperopatches.com/api/lookup?titleid={titleId}"
         )
 
-        if (data is None) or (data["success"] is False):
+        if (data is None) or (data.get("success") is not True):
             return
 
         name: str = data["metadata"]["name"]
@@ -252,6 +260,65 @@ class Renovate:
         # Ensure no changes go without notification
         if success is True:
             self.history["prospero"][titleId] = current
+            self.changed = True
+
+    def ProcessOrbisTitle(self: Any, titleId: str) -> None:
+        """
+        Get the current version of the specified PlayStation 4 title and
+        determine whether or not it has updated.
+        """
+
+        past: Optional[str] = self.history["orbis"].get(titleId)
+
+        data: Optional[Dict[str, Any]] = Utility.GET(
+            self, f"https://orbispatches.com/api/lookup?titleid={titleId}"
+        )
+
+        if (data is None) or (data.get("success") is not True):
+            return
+
+        name: str = data["metadata"]["name"]
+        current: str = data["metadata"]["currentVersion"]
+
+        if past is None:
+            self.history["orbis"][titleId] = current
+            self.changed = True
+
+            logger.success(
+                f"Orbis title {name} previously untracked, saved version {current} to title history"
+            )
+
+            return
+        elif past == current:
+            logger.info(f"Orbis title {name} not updated ({current})")
+
+            return
+
+        logger.success(f"Orbis title {name} updated, {past} -> {current}")
+
+        success: bool = Renovate.Notify(
+            self,
+            {
+                "name": name,
+                "url": f"https://orbispatches.com/{titleId}",
+                "platformColor": "00439C",
+                "region": data["metadata"]["region"],
+                "titleId": titleId,
+                "platformLogo": "https://i.imgur.com/ccNqLcb.png",
+                "thumbnail": None
+                if (icon := data["metadata"]["icon"]) is False
+                else icon,
+                "image": None
+                if (background := data["metadata"]["background"]) is False
+                else background,
+                "pastVersion": past,
+                "currentVersion": current,
+            },
+        )
+
+        # Ensure no changes go without notification
+        if success is True:
+            self.history["orbis"][titleId] = current
             self.changed = True
 
     def Notify(self: Any, data: Dict[str, str]) -> bool:
