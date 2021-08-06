@@ -1,59 +1,100 @@
 import json
+from time import sleep
 from typing import Any, Dict, Optional
 
 import httpx
-from httpx import Response, codes
+from httpx import HTTPError, Response, TimeoutException
 from loguru import logger
 
 
 class Utility:
     """Utilitarian functions designed for Renovate."""
 
-    def GET(self: Any, url: str, raw: bool = False) -> Optional[Dict[str, Any]]:
+    def GET(
+        self: Any, url: str, raw: bool = False, isRetry: bool = False
+    ) -> Optional[Dict[str, Any]]:
         """Perform an HTTP GET request and return its response."""
+
+        logger.debug(f"GET {url}")
 
         try:
             res: Response = httpx.get(url)
+            status: int = res.status_code
             data: str = res.text
+
+            res.raise_for_status()
+        except HTTPError as e:
+            if isRetry is False:
+                logger.debug(f"(HTTP {status}) GET {url} failed, {e}... Retry in 10s")
+
+                sleep(10)
+
+                return Utility.GET(self, url, raw, True)
+
+            logger.error(f"(HTTP {status}) GET {url} failed, {e}")
+
+            return
+        except TimeoutException as e:
+            if isRetry is False:
+                logger.debug(f"GET {url} failed, {e}... Retry in 10s")
+
+                sleep(10)
+
+                return Utility.GET(self, url, raw, True)
+
+            # TimeoutException is common, no need to log as error
+            logger.debug(f"GET {url} failed, {e}")
+
+            return
         except Exception as e:
-            logger.error(f"GET failed {url}, {e}")
+            if isRetry is False:
+                logger.debug(f"GET {url} failed, {e}... Retry in 10s")
+
+                sleep(10)
+
+                return Utility.GET(self, url, raw, True)
+
+            logger.error(f"GET {url} failed, {e}")
 
             return
 
-        status: int = res.status_code
-
-        logger.debug(f"(HTTP {status}) GET {url}")
         logger.trace(data)
 
-        if codes.is_error(status) is False:
-            if raw is True:
-                return data
+        if raw is True:
+            return data
 
-            return json.loads(data)
-        else:
-            logger.error(f"(HTTP {status}) GET Failed {url}")
-            logger.trace(data)
+        return json.loads(data)
 
     def POST(self: Any, url: str, payload: Dict[str, Any]) -> bool:
         """Perform an HTTP POST request and return its status."""
 
-        res: Response = httpx.post(
-            url, data=json.dumps(payload), headers={"content-type": "application/json"}
-        )
+        try:
+            res: Response = httpx.post(
+                url,
+                data=json.dumps(payload),
+                headers={"content-type": "application/json"},
+            )
+            status: int = res.status_code
+            data: str = res.text
 
-        status: int = res.status_code
-        data: str = res.text
-
-        logger.debug(f"(HTTP {status}) POST {url}")
-        logger.trace(data)
-
-        if codes.is_error(status) is False:
-            return True
-        else:
-            logger.error(f"(HTTP {status}) POST Failed {url}")
-            logger.error(data)
+            res.raise_for_status()
+        except HTTPError as e:
+            logger.error(f"(HTTP {status}) POST {url} failed, {e}")
 
             return False
+        except TimeoutException as e:
+            # TimeoutException is common, no need to log as error
+            logger.debug(f"POST {url} failed, {e}")
+
+            return False
+        except Exception as e:
+            logger.error(f"POST {url} failed, {e}")
+
+            return False
+
+        logger.trace(data)
+
+        return True
 
     def GetBattleBuild(
         self: Any, titleId: str, region: str, build: str
