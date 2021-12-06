@@ -194,8 +194,8 @@ class Renovate:
                 "titleId": titleId,
                 "platformLogo": "https://i.imgur.com/dI6bDr7.png",
                 "thumbnail": thumbnail,
-                "pastVersion": past,
-                "currentVersion": current,
+                "pastVersion": f"`{past}`",
+                "currentVersion": f"`{current}`",
                 "build": None
                 if data["encrypted"] is True
                 else Utility.GetBattleBuild(self, titleId, region, build),
@@ -252,8 +252,8 @@ class Renovate:
                 "platformLogo": "https://i.imgur.com/ccNqLcb.png",
                 "thumbnail": data["metadata"]["icon"],
                 "image": data["metadata"]["background"],
-                "pastVersion": past,
-                "currentVersion": current,
+                "pastVersion": f"`{past}`",
+                "currentVersion": f"`{current}`",
             },
         )
 
@@ -311,8 +311,8 @@ class Renovate:
                 "image": None
                 if (background := data["metadata"]["background"]) is False
                 else background,
-                "pastVersion": past,
-                "currentVersion": current,
+                "pastVersion": f"`{past}`",
+                "currentVersion": f"`{current}`",
             },
         )
 
