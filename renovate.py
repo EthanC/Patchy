@@ -11,8 +11,8 @@ from utils import Utility
 
 class Renovate:
     """
-    Renovate is a Battle.net and PlayStation title watcher that reports
-    updates via Discord.
+    Renovate is a Battle.net, PlayStation, and Steam title watcher that
+    reports updates via Discord.
 
     https://github.com/EthanC/Renovate
     """
@@ -42,7 +42,11 @@ class Renovate:
         for title in self.config["titles"]["orbis"]:
             Renovate.ProcessOrbisTitle(self, title)
 
-        if self.changed is True:
+        # Steam
+        for title in self.config["titles"]["steam"]:
+            Renovate.ProcessSteamTitle(self, title)
+
+        if self.changed:
             Renovate.SaveHistory(self)
 
         logger.success("Finished processing titles")
@@ -79,7 +83,7 @@ class Renovate:
 
                 logger.error(f"Failed to set logger severity to {level}, {e}")
 
-        if settings["discord"]["enable"] is True:
+        if settings["discord"]["enable"]:
             level: str = settings["discord"]["severity"].upper()
             url: str = settings["discord"]["webhookUrl"]
 
@@ -109,7 +113,15 @@ class Renovate:
             with open("history.json", "r") as file:
                 history: Dict[str, Any] = json.loads(file.read())
         except FileNotFoundError:
-            history: Dict[str, Any] = {"battle": {}, "prospero": {}, "orbis": {}}
+            history: Dict[str, Any] = {
+                "battle": {},
+                "prospero": {},
+                "orbis": {},
+                "steam": {},
+            }
+
+            with open("history.json", "w+") as file:
+                file.write(json.dumps(history, indent=4))
 
             logger.success("Title history not found, created empty file")
         except Exception as e:
@@ -123,8 +135,11 @@ class Renovate:
         if history.get("prospero") is None:
             history["prospero"] = {}
 
-        if history.get("prospero") is None:
+        if history.get("orbis") is None:
             history["orbis"] = {}
+
+        if history.get("steam") is None:
+            history["steam"] = {}
 
         logger.success("Loaded title history")
 
@@ -197,13 +212,13 @@ class Renovate:
                 "pastVersion": f"`{past}`",
                 "currentVersion": f"`{current}`",
                 "build": None
-                if data["encrypted"] is True
+                if data["encrypted"]
                 else Utility.GetBattleBuild(self, titleId, region, build),
             },
         )
 
         # Ensure no changes go without notification
-        if success is True:
+        if success:
             self.history["battle"][titleId] = current
             self.changed = True
 
@@ -219,7 +234,7 @@ class Renovate:
             self, f"https://prosperopatches.com/api/lookup?titleid={titleId}"
         )
 
-        if (data is None) or (data.get("success") is not True):
+        if (data is None) or (not data.get("success")):
             return
 
         name: str = data["metadata"]["name"]
@@ -258,7 +273,7 @@ class Renovate:
         )
 
         # Ensure no changes go without notification
-        if success is True:
+        if success:
             self.history["prospero"][titleId] = current
             self.changed = True
 
@@ -274,7 +289,7 @@ class Renovate:
             self, f"https://orbispatches.com/api/lookup?titleid={titleId}"
         )
 
-        if (data is None) or (data.get("success") is not True):
+        if (data is None) or (not data.get("success")):
             return
 
         name: str = data["metadata"]["name"]
@@ -305,11 +320,9 @@ class Renovate:
                 "region": data["metadata"]["region"],
                 "titleId": titleId,
                 "platformLogo": "https://i.imgur.com/ccNqLcb.png",
-                "thumbnail": None
-                if (icon := data["metadata"]["icon"]) is False
-                else icon,
+                "thumbnail": None if not (icon := data["metadata"]["icon"]) else icon,
                 "image": None
-                if (background := data["metadata"]["background"]) is False
+                if not (background := data["metadata"]["background"])
                 else background,
                 "pastVersion": f"`{past}`",
                 "currentVersion": f"`{current}`",
@@ -317,8 +330,73 @@ class Renovate:
         )
 
         # Ensure no changes go without notification
-        if success is True:
+        if success:
             self.history["orbis"][titleId] = current
+            self.changed = True
+
+    def ProcessSteamTitle(self: Any, appId: int) -> None:
+        """
+        Get the current version of the specified Steam title and
+        determine whether or not it has updated.
+        """
+
+        past: Optional[str] = self.history["steam"].get(str(appId))
+
+        data: Optional[Dict[str, Any]] = Utility.GET(
+            self, f"https://api.steamcmd.net/v1/info/{appId}"
+        )
+
+        if (data is None) or (data.get("status") != "success"):
+            return
+
+        name: str = data["data"][str(appId)]["common"]["name"]
+        icon: str = data["data"][str(appId)]["common"]["icon"]
+        current: Optional[str] = None
+
+        try:
+            depots: Dict[str, Any] = data["data"][str(appId)]["depots"]
+            current = depots["branches"]["public"]["buildid"]
+        except Exception as e:
+            logger.error(
+                f"Failed to determine current version for Steam title {name}, {e}"
+            )
+
+            return
+
+        if past is None:
+            self.history["steam"][str(appId)] = current
+            self.changed = True
+
+            logger.success(
+                f"Steam title {name} previously untracked, saved version {current} to title history"
+            )
+
+            return
+        elif past == current:
+            logger.info(f"Steam title {name} not updated ({current})")
+
+            return
+
+        logger.success(f"Steam title {name} updated, {past} -> {current}")
+
+        success: bool = Renovate.Notify(
+            self,
+            {
+                "name": name,
+                "url": f"https://steamdb.info/app/{appId}/patchnotes/",
+                "platformColor": "1B2838",
+                "titleId": str(appId),
+                "platformLogo": "https://i.imgur.com/oYkhH6s.png",
+                "thumbnail": f"https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/{appId}/{icon}.jpg",
+                "image": f"https://cdn.cloudflare.steamstatic.com/steam/apps/{appId}/header.jpg",
+                "pastVersion": f"`{past}`",
+                "currentVersion": f"`{current}`",
+            },
+        )
+
+        # Ensure no changes go without notification
+        if success:
+            self.history["steam"][str(appId)] = current
             self.changed = True
 
     def Notify(self: Any, data: Dict[str, str]) -> bool:
@@ -326,7 +404,7 @@ class Renovate:
 
         settings: Dict[str, Any] = self.config["discord"]
 
-        region: str = data["region"]
+        region: Optional[str] = data.get("region")
         titleId: str = data["titleId"]
 
         payload: Dict[str, Any] = {
@@ -341,7 +419,7 @@ class Renovate:
                     else timestamp,
                     "color": int(data["platformColor"], base=16),
                     "footer": {
-                        "text": f"({region}) {titleId}",
+                        "text": titleId if region is None else f"({region}) {titleId}",
                         "icon_url": data["platformLogo"],
                     },
                     "thumbnail": {"url": data.get("thumbnail")},
@@ -377,7 +455,7 @@ class Renovate:
     def SaveHistory(self: Any) -> None:
         """Save the latest title versions to history.json"""
 
-        if self.config.get("debug") is True:
+        if self.config.get("debug"):
             logger.warning("Debug is active, not saving title history")
 
             return

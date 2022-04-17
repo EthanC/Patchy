@@ -17,25 +17,16 @@ class Utility:
 
         logger.debug(f"GET {url}")
 
+        status: int = 0
+
         try:
-            res: Response = httpx.get(url)
-            status: int = res.status_code
-            data: str = res.text
+            res: Response = httpx.get(url, timeout=30.0, follow_redirects=True)
+            status = res.status_code
+            data: Dict[str, Any] = res.text
 
             res.raise_for_status()
-        except HTTPError as e:
-            if isRetry is False:
-                logger.debug(f"(HTTP {status}) GET {url} failed, {e}... Retry in 10s")
-
-                sleep(10)
-
-                return Utility.GET(self, url, raw, True)
-
-            logger.error(f"(HTTP {status}) GET {url} failed, {e}")
-
-            return
         except TimeoutException as e:
-            if isRetry is False:
+            if not isRetry:
                 logger.debug(f"GET {url} failed, {e}... Retry in 10s")
 
                 sleep(10)
@@ -46,8 +37,19 @@ class Utility:
             logger.debug(f"GET {url} failed, {e}")
 
             return
+        except HTTPError as e:
+            if not isRetry:
+                logger.debug(f"(HTTP {status}) GET {url} failed, {e}... Retry in 10s")
+
+                sleep(10)
+
+                return Utility.GET(self, url, raw, True)
+
+            logger.error(f"(HTTP {status}) GET {url} failed, {e}")
+
+            return
         except Exception as e:
-            if isRetry is False:
+            if not isRetry:
                 logger.debug(f"GET {url} failed, {e}... Retry in 10s")
 
                 sleep(10)
@@ -63,7 +65,7 @@ class Utility:
         if raw is True:
             return data
 
-        return json.loads(data)
+        return res.json()
 
     def POST(self: Any, url: str, payload: Dict[str, Any]) -> bool:
         """Perform an HTTP POST request and return its status."""
@@ -74,19 +76,9 @@ class Utility:
                 data=json.dumps(payload),
                 headers={"content-type": "application/json"},
             )
-            status: int = res.status_code
             data: str = res.text
 
             res.raise_for_status()
-        except HTTPError as e:
-            logger.error(f"(HTTP {status}) POST {url} failed, {e}")
-
-            return False
-        except TimeoutException as e:
-            # TimeoutException is common, no need to log as error
-            logger.debug(f"POST {url} failed, {e}")
-
-            return False
         except Exception as e:
             logger.error(f"POST {url} failed, {e}")
 
@@ -121,7 +113,7 @@ class Utility:
         if (path is None) or (host is None):
             return
 
-        # https://github.com/BlizzTrack/BlizzTrack/blob/master/BlizzTrack/Pages/Partials/_view_versions.cshtml#L89
+        # https://github.com/BlizzTrack/BlizzTrack/blob/d10e550bd1588338c39f10f48c744679aef3b62c/BlizzTrack/Pages/Partials/_view_versions.cshtml#L89
         dest: str = f"config/{build[:2]}/{build[2:4]}/{build}"
         buildConfig: Optional[Dict[str, Any]] = Utility.GET(
             self, f"http://{host}/{path}/{dest}", True
@@ -131,7 +123,7 @@ class Utility:
             return
 
         for line in str(buildConfig).splitlines():
-            if line.startswith("build-name") is False:
+            if not line.startswith("build-name"):
                 continue
 
             return line.split(" = ")[1]

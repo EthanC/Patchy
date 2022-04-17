@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "Renovate"
 version = "1.0.0"
-description = "A Battle.net and PlayStation title watcher that reports updates via Discord."
+description = "A Battle.net, PlayStation, and Steam title watcher that reports updates via Discord."
 authors = ["Ethan C <EthanC@GitHub.com>"]
 license = "MIT"
 
