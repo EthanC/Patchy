@@ -157,23 +157,23 @@ class Renovate:
         past: Optional[str] = self.history["battle"].get(titleId)
 
         data: Optional[Dict[str, Any]] = Utility.GET(
-            self, f"https://blizztrack.com/api/manifest/versions/{titleId}"
+            self, f"https://blizztrack.com/api/manifest/{titleId}/versions"
         )
 
-        if data is None:
+        if (data is None) or (not data["success"]):
             return
 
-        titleId = data["product"]
-        name: str = data["name"]
-        current: str = data["data"][0]["versionsname"]
-        build: str = data["data"][0]["buildconfig"]
+        titleId = data["result"]["tact"]
+        name: str = data["result"]["name"]
+        current: str = data["result"]["data"][0]["version_name"]
+        build: str = data["result"]["data"][0]["build_config"]
 
         # Try to select desired region, otherwise default to first
-        for entry in data["data"]:
-            if entry["region_name"].lower() == region.lower():
-                region = entry["region_name"]
-                current = entry["versionsname"]
-                build = entry["buildconfig"]
+        for entry in data["result"]["data"]:
+            if entry["name"].lower() == region.lower():
+                region = entry["name"]
+                current = entry["version_name"]
+                build = entry["build_config"]
 
         if past is None:
             self.history["battle"][titleId] = current
@@ -192,18 +192,26 @@ class Renovate:
         logger.success(f"Battle.net title {name} updated, {past} -> {current}")
 
         thumbnail: Optional[str] = None
-        for image in data["logos"]:
-            if image["type"] == "image/png":
-                thumbnail = image["url"]
 
-                break
+        fragments: Optional[Dict[str, Any]] = Utility.GET(
+            self, f"https://blizztrack.com/api/fragments/{titleId}"
+        )
+
+        try:
+            if fragments["success"]:
+                iconKey: str = fragments["result"]["products"][0]["base"]["icon_medium"]
+                iconHash: str = fragments["result"]["files"]["default"][iconKey]["hash"]
+
+                thumbnail = f"https://blizzard.blizzmeta.com/{iconHash}"
+        except Exception as e:
+            logger.debug(f"Failed to locate icon for Battle.net title {titleId}, {e}")
 
         success: bool = Renovate.Notify(
             self,
             {
                 "name": name,
-                "url": f"https://blizztrack.com/v/{titleId}/versions",
-                "timestamp": data["indexed"],
+                "url": f"https://blizztrack.com/view/{titleId}?type=versions",
+                "timestamp": data["result"]["created_at"],
                 "platformColor": "148EFF",
                 "region": region,
                 "titleId": titleId,
@@ -212,7 +220,7 @@ class Renovate:
                 "pastVersion": f"`{past}`",
                 "currentVersion": f"`{current}`",
                 "build": None
-                if data["encrypted"]
+                if data["result"]["encrypted"]
                 else Utility.GetBattleBuild(self, titleId, region, build),
             },
         )

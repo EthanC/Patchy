@@ -94,21 +94,21 @@ class Utility:
         """Get the Build Name for the specified Battle.net title."""
 
         cdn: Optional[Dict[str, Any]] = Utility.GET(
-            self, f"https://blizztrack.com/api/manifest/cdns/{titleId}"
+            self, f"https://blizztrack.com/api/manifest/{titleId}/cdns"
         )
 
-        if cdn is None:
+        if (cdn is None) or (not cdn["success"]):
             return
 
         path: Optional[str] = None
         host: Optional[str] = None
 
-        for entry in cdn["data"]:
-            if entry["region_name"].lower() != region.lower():
+        for entry in cdn["result"]["data"]:
+            if entry["name"].lower() != region.lower():
                 continue
 
             path = entry["path"]
-            host = entry["hosts"][0]
+            host = entry["hosts"].split(" ")[0]
 
         if (path is None) or (host is None):
             return
