@@ -1,27 +1,52 @@
 # Renovate
 
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Renovate/main.yml?branch=main) ![Docker Pulls](https://img.shields.io/docker/pulls/ethanchrisp/renovate?label=Docker%20Pulls) ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ethanchrisp/renovate/latest?label=Docker%20Image%20Size)
+
 Renovate is a Battle.net, PlayStation, and Steam title watcher that reports updates via Discord.
 
 <p align="center">
     <img src="https://i.imgur.com/qEimihY.png" draggable="false">
 </p>
 
-## Usage
+## Setup
 
-Open `config_example.json` and provide the configurable values, then save and rename the file to `config.json`.
+A [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) is recommended for notifications.
 
-Renovate is designed to be ran using a task scheduler, such as [cron](https://crontab.guru/).
+Regardless of your chosen setup method, Renovate is intended for use with a task scheduler, such as [cron](https://crontab.guru/).
 
+**Environment Variables:**
+
+-   `BATTLE_TITLES`: Comma-separated list of Battle.net title IDs to watch.
+-   `PROSPERO_TITLES`: Comma-separated list of PlayStation 5 title IDs to watch.
+-   `ORBIS_TITLES`: Comma-separated list of PlayStation 4 title IDs to watch.
+-   `STEAM_TITLES`: Comma-separated list of Steam title IDs to watch.
+-   `DISCORD_NOTIFY_WEBHOOK`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive available update notifications.
+-   `DISCORD_LOG_WEBHOOK`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive log events.
+-   `DISCORD_LOG_LEVEL`: Minimum [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html) severity level to forward to Discord.
+
+### Docker (Recommended)
+
+Modify the following `docker-compose.yml` example file, then run `docker compose up`.
+
+```yml
+version: "3"
+services:
+  renovate:
+    container_name: renovate
+    image: ethanchrisp/renovate:latest
+    environment:
+      DISCORD_NOTIFY_WEBHOOK: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
+      DISCORD_LOG_WEBHOOK: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
+      DISCORD_LOG_LEVEL: WARNING
 ```
-python renovate.py
-```
 
-### Supported Platforms
+### Standalone
 
--   Battle.net (`battle`)
--   PlayStation 5 (`prospero`)
--   PlayStation 4 (`orbis`)
--   Steam (`steam`)
+Renovate is built for [Python 3.11](https://www.python.org/) or greater.
+
+1. Install required dependencies using [Poetry](https://python-poetry.org/): `poetry install`
+2. Rename `.env_example` to `.env`, then provide the environment variables.
+3. Start Moniker: `python renovate.py`
 
 ## Credits
 

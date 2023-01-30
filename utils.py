@@ -64,8 +64,14 @@ class Utility:
 
         if raw is True:
             return data
+        
+        try:
+            return res.json()
+        except Exception as e:
+            logger.error(f"GET {url} failed, {e}")
+            logger.trace(data)
 
-        return res.json()
+            return
 
     def POST(self: Any, url: str, payload: Dict[str, Any]) -> bool:
         """Perform an HTTP POST request and return its status."""

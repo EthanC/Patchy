@@ -1,8 +1,10 @@
 import json
+import os
 from datetime import datetime
-from sys import exit, stderr
+from sys import exit
 from typing import Any, Dict, Optional
 
+import dotenv
 from loguru import logger
 from notifiers.logging import NotificationHandler
 
@@ -17,94 +19,60 @@ class Renovate:
     https://github.com/EthanC/Renovate
     """
 
-    def Initialize(self: Any) -> None:
+    def Start(self: Any) -> None:
         """Initialize Renovate and begin primary functionality."""
 
         logger.info("Renovate")
         logger.info("https://github.com/EthanC/Renovate")
 
-        self.config: Dict[str, Any] = Renovate.LoadConfig(self)
+        if dotenv.load_dotenv():
+            logger.success("Loaded environment variables")
+            logger.trace(os.environ)
 
-        Renovate.SetupLogging(self)
+        if logUrl := os.environ.get("DISCORD_LOG_WEBHOOK"):
+            if not (logLevel := os.environ.get("DISCORD_LOG_LEVEL")):
+                logger.critical("Level for Discord webhook logging is not set")
+
+                return
+
+            logger.add(
+                NotificationHandler(
+                    "slack", defaults={"webhook_url": f"{logUrl}/slack"}
+                ),
+                level=logLevel,
+                format="```\n{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}\n```",
+            )
+
+            logger.success(f"Enabled logging to Discord webhook")
+            logger.trace(logUrl)
 
         self.history: Dict[str, Any] = Renovate.LoadHistory(self)
         self.changed: bool = False
 
         # Battle.net
-        for title in self.config["titles"]["battle"]:
-            Renovate.ProcessBattleTitle(self, title)
+        if titles := os.environ.get("BATTLE_TITLES"):
+            for title in titles.split(","):
+                Renovate.ProcessBattleTitle(self, title)
 
         # PlayStation 5
-        for title in self.config["titles"]["prospero"]:
-            Renovate.ProcessProsperoTitle(self, title)
+        if titles := os.environ.get("PROSPERO_TITLES"):
+            for title in titles.split(","):
+                Renovate.ProcessProsperoTitle(self, title)
 
         # PlayStation 4
-        for title in self.config["titles"]["orbis"]:
-            Renovate.ProcessOrbisTitle(self, title)
+        if titles := os.environ.get("ORBIS_TITLES"):
+            for title in titles.split(","):
+                Renovate.ProcessOrbisTitle(self, title)
 
         # Steam
-        for title in self.config["titles"]["steam"]:
-            Renovate.ProcessSteamTitle(self, title)
+        if titles := os.environ.get("STEAM_TITLES"):
+            for title in titles.split(","):
+                Renovate.ProcessSteamTitle(self, title)
 
         if self.changed:
             Renovate.SaveHistory(self)
 
         logger.success("Finished processing titles")
-
-    def LoadConfig(self: Any) -> Dict[str, Any]:
-        """Load the configuration values specified in config.json"""
-
-        try:
-            with open("config.json", "r") as file:
-                config: Dict[str, Any] = json.loads(file.read())
-        except Exception as e:
-            logger.critical(f"Failed to load configuration, {e}")
-
-            exit(1)
-
-        logger.success("Loaded configuration")
-
-        return config
-
-    def SetupLogging(self: Any) -> None:
-        """Setup the logger using the configured values."""
-
-        settings: Dict[str, Any] = self.config["logging"]
-
-        if (level := settings["severity"].upper()) != "DEBUG":
-            try:
-                logger.remove()
-                logger.add(stderr, level=level)
-
-                logger.success(f"Set logger severity to {level}")
-            except Exception as e:
-                # Fallback to default logger settings
-                logger.add(stderr, level="DEBUG")
-
-                logger.error(f"Failed to set logger severity to {level}, {e}")
-
-        if settings["discord"]["enable"]:
-            level: str = settings["discord"]["severity"].upper()
-            url: str = settings["discord"]["webhookUrl"]
-
-            try:
-                # Notifiers library does not natively support Discord at
-                # this time. However, Discord will accept payloads which
-                # are compatible with Slack by appending to the url.
-                # https://github.com/liiight/notifiers/issues/400
-                handler: NotificationHandler = NotificationHandler(
-                    "slack", defaults={"webhook_url": f"{url}/slack"}
-                )
-
-                logger.add(
-                    handler,
-                    level=level,
-                    format="```\n{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}\n```",
-                )
-
-                logger.success(f"Enabled logging to Discord with severity {level}")
-            except Exception as e:
-                logger.error(f"Failed to enable logging to Discord, {e}")
 
     def LoadHistory(self: Any) -> Dict[str, Any]:
         """Load the last seen title versions specified in history.json"""
@@ -145,14 +113,11 @@ class Renovate:
 
         return history
 
-    def ProcessBattleTitle(self: Any, title: Dict[str, str]) -> None:
+    def ProcessBattleTitle(self: Any, titleId: str) -> None:
         """
         Get the current version of the specified Battle.net title and
         determine whether or not it has updated.
         """
-
-        titleId: str = title["titleId"]
-        region: str = title["region"]
 
         past: Optional[str] = self.history["battle"].get(titleId)
 
@@ -168,9 +133,9 @@ class Renovate:
         current: str = data["result"]["data"][0]["version_name"]
         build: str = data["result"]["data"][0]["build_config"]
 
-        # Try to select desired region, otherwise default to first
+        # Try to Americas region, otherwise default to first
         for entry in data["result"]["data"]:
-            if entry["name"].lower() == region.lower():
+            if entry["name"].lower() == "americas":
                 region = entry["name"]
                 current = entry["version_name"]
                 build = entry["build_config"]
@@ -410,14 +375,10 @@ class Renovate:
     def Notify(self: Any, data: Dict[str, str]) -> bool:
         """Report title version change to the configured Discord webhook."""
 
-        settings: Dict[str, Any] = self.config["discord"]
-
         region: Optional[str] = data.get("region")
         titleId: str = data["titleId"]
 
         payload: Dict[str, Any] = {
-            "username": settings["username"],
-            "avatar_url": settings["avatarUrl"],
             "embeds": [
                 {
                     "title": data["name"],
@@ -458,12 +419,12 @@ class Renovate:
                 {"name": "Build Name", "value": f"`{build}`"}
             )
 
-        return Utility.POST(self, settings["webhookUrl"], payload)
+        return Utility.POST(self, os.environ.get("DISCORD_NOTIFY_WEBHOOK"), payload)
 
     def SaveHistory(self: Any) -> None:
         """Save the latest title versions to history.json"""
 
-        if self.config.get("debug"):
+        if os.environ.get("DEBUG"):
             logger.warning("Debug is active, not saving title history")
 
             return
@@ -481,6 +442,6 @@ class Renovate:
 
 if __name__ == "__main__":
     try:
-        Renovate.Initialize(Renovate)
+        Renovate.Start(Renovate)
     except KeyboardInterrupt:
         exit()
