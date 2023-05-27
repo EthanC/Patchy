@@ -62,9 +62,9 @@ class Utility:
 
         logger.trace(data)
 
-        if raw is True:
+        if raw:
             return data
-        
+
         try:
             return res.json()
         except Exception as e:
