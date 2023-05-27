@@ -377,6 +377,12 @@ class Renovate:
 
         region: Optional[str] = data.get("region")
         titleId: str = data["titleId"]
+        image: Optional[str] = data.get("image")
+        thumbnail: Optional[str] = data.get("thumbnail")
+
+        # Append timestamp to image URLs to prevent Discord CDN
+        # from serving cached, outdated images.
+        cacheBust: str = str(int(datetime.utcnow().timestamp()))
 
         payload: Dict[str, Any] = {
             "embeds": [
@@ -391,8 +397,10 @@ class Renovate:
                         "text": titleId if region is None else f"({region}) {titleId}",
                         "icon_url": data["platformLogo"],
                     },
-                    "thumbnail": {"url": data.get("thumbnail")},
-                    "image": {"url": data.get("image")},
+                    "thumbnail": {
+                        "url": None if thumbnail is None else f"{thumbnail}?{cacheBust}"
+                    },
+                    "image": {"url": None if image is None else f"{image}?{cacheBust}"},
                     "author": {
                         "name": "Renovate",
                         "url": "https://github.com/EthanC/Renovate",
