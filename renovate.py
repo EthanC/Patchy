@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 from sys import exit
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Self
 
 import dotenv
 from loguru import logger
@@ -19,7 +19,7 @@ class Renovate:
     https://github.com/EthanC/Renovate
     """
 
-    def Start(self: Any) -> None:
+    def Start(self: Self) -> None:
         """Initialize Renovate and begin primary functionality."""
 
         logger.info("Renovate")
@@ -74,7 +74,7 @@ class Renovate:
 
         logger.success("Finished processing titles")
 
-    def LoadHistory(self: Any) -> Dict[str, Any]:
+    def LoadHistory(self: Self) -> Dict[str, Any]:
         """Load the last seen title versions specified in history.json"""
 
         try:
@@ -113,7 +113,7 @@ class Renovate:
 
         return history
 
-    def ProcessBattleTitle(self: Any, titleId: str) -> None:
+    def ProcessBattleTitle(self: Self, titleId: str) -> None:
         """
         Get the current version of the specified Battle.net title and
         determine whether or not it has updated.
@@ -195,7 +195,7 @@ class Renovate:
             self.history["battle"][titleId] = current
             self.changed = True
 
-    def ProcessProsperoTitle(self: Any, titleId: str) -> None:
+    def ProcessProsperoTitle(self: Self, titleId: str) -> None:
         """
         Get the current version of the specified PlayStation 5 title and
         determine whether or not it has updated.
@@ -250,7 +250,7 @@ class Renovate:
             self.history["prospero"][titleId] = current
             self.changed = True
 
-    def ProcessOrbisTitle(self: Any, titleId: str) -> None:
+    def ProcessOrbisTitle(self: Self, titleId: str) -> None:
         """
         Get the current version of the specified PlayStation 4 title and
         determine whether or not it has updated.
@@ -307,7 +307,7 @@ class Renovate:
             self.history["orbis"][titleId] = current
             self.changed = True
 
-    def ProcessSteamTitle(self: Any, appId: int) -> None:
+    def ProcessSteamTitle(self: Self, appId: int) -> None:
         """
         Get the current version of the specified Steam title and
         determine whether or not it has updated.
@@ -372,7 +372,7 @@ class Renovate:
             self.history["steam"][str(appId)] = current
             self.changed = True
 
-    def Notify(self: Any, data: Dict[str, str]) -> bool:
+    def Notify(self: Self, data: Dict[str, str]) -> bool:
         """Report title version change to the configured Discord webhook."""
 
         region: Optional[str] = data.get("region")
@@ -429,7 +429,7 @@ class Renovate:
 
         return Utility.POST(self, os.environ.get("DISCORD_NOTIFY_WEBHOOK"), payload)
 
-    def SaveHistory(self: Any) -> None:
+    def SaveHistory(self: Self) -> None:
         """Save the latest title versions to history.json"""
 
         if os.environ.get("DEBUG"):

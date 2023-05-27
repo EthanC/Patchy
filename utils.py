@@ -1,6 +1,6 @@
 import json
 from time import sleep
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Self
 
 import httpx
 from httpx import HTTPError, Response, TimeoutException
@@ -11,7 +11,7 @@ class Utility:
     """Utilitarian functions designed for Renovate."""
 
     def GET(
-        self: Any, url: str, raw: bool = False, isRetry: bool = False
+        self: Self, url: str, raw: bool = False, isRetry: bool = False
     ) -> Optional[Dict[str, Any]]:
         """Perform an HTTP GET request and return its response."""
 
@@ -73,7 +73,7 @@ class Utility:
 
             return
 
-    def POST(self: Any, url: str, payload: Dict[str, Any]) -> bool:
+    def POST(self: Self, url: str, payload: Dict[str, Any]) -> bool:
         """Perform an HTTP POST request and return its status."""
 
         try:
@@ -95,7 +95,7 @@ class Utility:
         return True
 
     def GetBattleBuild(
-        self: Any, titleId: str, region: str, build: str
+        self: Self, titleId: str, region: str, build: str
     ) -> Optional[str]:
         """Get the Build Name for the specified Battle.net title."""
 
