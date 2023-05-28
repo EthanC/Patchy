@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "Renovate"
 version = "1.0.0"
-description = "A Battle.net, PlayStation, and Steam title watcher that reports updates via Discord."
+description = "A Steam, Battle.net, and PlayStation title watcher that reports updates via Discord."
 authors = ["Ethan C <EthanC@GitHub.com>"]
 license = "MIT"
 
@@ -11,6 +11,7 @@ python-dotenv = "^1.0.0"
 loguru = "^0.7.0"
 notifiers = "^1.3.3"
 httpx = "^0.24.1"
+discord-webhook = "^1.1.0"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.17.4"
