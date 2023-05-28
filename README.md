@@ -5,7 +5,7 @@
 Renovate is a Steam, Battle.net, and PlayStation title watcher that reports updates via Discord.
 
 <p align="center">
-    <img src="https://i.imgur.com/GLNgWcx.png" draggable="false">
+    <img src="https://i.imgur.com/XVGizWC.png" draggable="false">
 </p>
 
 ## Setup

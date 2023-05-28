@@ -81,8 +81,8 @@ class Orbis:
         embed.set_title(name)
         embed.set_url(url)
         embed.set_color("00439C")
-        embed.add_embed_field("Previous Version", f"`{previous}`")
-        embed.add_embed_field("Current Version", f"`{current}`")
+        embed.add_embed_field("Previous Version", f"```diff\n- {previous}\n```")
+        embed.add_embed_field("Current Version", f"```diff\n+ {current}\n```")
         embed.set_footer(
             text=f"{titleId} ({region})", icon_url="https://i.imgur.com/ccNqLcb.png"
         )

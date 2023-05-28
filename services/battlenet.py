@@ -172,8 +172,8 @@ class Battlenet:
         embed.set_title(name)
         embed.set_url(url)
         embed.set_color("148EFF")
-        embed.add_embed_field("Previous Version", f"`{previous}`")
-        embed.add_embed_field("Current Version", f"`{current}`")
+        embed.add_embed_field("Previous Version", f"```diff\n- {previous}\n```")
+        embed.add_embed_field("Current Version", f"```diff\n+ {current}\n```")
         embed.set_footer(
             text=f"{titleId} ({region})", icon_url="https://i.imgur.com/dI6bDr7.png"
         )
@@ -185,7 +185,7 @@ class Battlenet:
             embed.set_thumbnail(f"{thumbnail}?{str(int(now))}")
 
         if build:
-            embed.add_embed_field("Build Name", f"`{build}`", False)
+            embed.add_embed_field("Build Name", f"```\n{build}```", False)
 
         if image:
             # Append timestamp to image URL to prevent Discord CDN

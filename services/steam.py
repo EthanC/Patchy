@@ -90,8 +90,8 @@ class Steam:
         embed.set_title(name)
         embed.set_url(url)
         embed.set_color("1B2838")
-        embed.add_embed_field("Previous Version", f"`{previous}`")
-        embed.add_embed_field("Current Version", f"`{current}`")
+        embed.add_embed_field("Previous Version", f"```diff\n- {previous}\n```")
+        embed.add_embed_field("Current Version", f"```diff\n+ {current}\n```")
         embed.set_footer(text=titleId, icon_url="https://i.imgur.com/oYkhH6s.png")
 
         if thumbnail:
