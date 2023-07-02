@@ -152,7 +152,7 @@ class Renovate:
         embed.set_author(
             "Renovate",
             url="https://github.com/EthanC/Renovate",
-            icon_url="https://i.imgur.com/bNGKmG0.png",
+            icon_url="https://i.imgur.com/HMRSQeQ.png",
         )
 
         if not embed.timestamp:
