@@ -185,7 +185,7 @@ class Battlenet:
             embed.set_thumbnail(f"{thumbnail}?{str(int(now))}")
 
         if build:
-            embed.add_embed_field("Build Name", f"```diff\n+ {build}```", False)
+            embed.add_embed_field("Build Name", f"```\n{build}```", False)
 
         if image:
             # Append timestamp to image URL to prevent Discord CDN
