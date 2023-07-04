@@ -94,7 +94,9 @@ class Battlenet:
             # content-type header for the Discord client to display in the embed.
             return f"https://wsrv.nl/?url=https://blizzard.blizzmeta.com/{hash}"
         except Exception as e:
-            logger.warning(f"Failed to get icon for Battle.net title {titleId}, {e}")
+            logger.opt(exception=e).warning(
+                f"Failed to get icon for Battle.net title {titleId}"
+            )
 
     def GetKeyArt(
         self: Self, titleId: str, data: Optional[Union[Dict[str, Any], str]]
@@ -112,7 +114,9 @@ class Battlenet:
             # content-type header for the Discord client to display in the embed.
             return f"https://wsrv.nl/?url=https://blizzard.blizzmeta.com/{hash}"
         except Exception as e:
-            logger.warning(f"Failed to get keyart for Battle.net title {titleId}, {e}")
+            logger.opt(exception=e).warning(
+                f"Failed to get keyart for Battle.net title {titleId}"
+            )
 
     def GetBuild(self: Self, titleId: str, region: str, build: str) -> Optional[str]:
         """Get the build name for the specified Battle.net title."""

@@ -2,13 +2,13 @@ import json
 import logging
 from datetime import datetime
 from os import environ
-from sys import exit
+from sys import exit, stdout
 from typing import Any, Dict, Self
 
 import dotenv
 from discord_webhook import DiscordEmbed, DiscordWebhook
 from loguru import logger
-from notifiers.logging import NotificationHandler
+from loguru_discord import DiscordSink
 
 from handlers import Intercept
 from services import Battlenet, Orbis, Prospero, Steam
@@ -28,29 +28,28 @@ class Renovate:
         logger.info("Renovate")
         logger.info("https://github.com/EthanC/Renovate")
 
+        # Reroute standard logging to Loguru
+        logging.basicConfig(handlers=[Intercept()], level=0, force=True)
+
         if dotenv.load_dotenv():
             logger.success("Loaded environment variables")
             logger.trace(environ)
 
-        # Reroute standard logging to Loguru
-        logging.basicConfig(handlers=[Intercept()], level=0, force=True)
+        if level := environ.get("LOG_LEVEL"):
+            logger.remove()
+            logger.add(stdout, level=level)
 
-        if logUrl := environ.get("DISCORD_LOG_WEBHOOK"):
-            if not (logLevel := environ.get("DISCORD_LOG_LEVEL")):
-                logger.critical("Level for Discord webhook logging is not set")
+            logger.success(f"Set console logging level to {level}")
 
-                return
-
+        if url := environ.get("LOG_DISCORD_WEBHOOK_URL"):
             logger.add(
-                NotificationHandler(
-                    "slack", defaults={"webhook_url": f"{logUrl}/slack"}
-                ),
-                level=logLevel,
-                format="```\n{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {name}:{function}:{line} - {message}\n```",
+                DiscordSink(url),
+                level=environ.get("LOG_DISCORD_WEBHOOK_LEVEL"),
+                backtrace=False,
             )
 
             logger.success(f"Enabled logging to Discord webhook")
-            logger.trace(logUrl)
+            logger.trace(url)
 
         self.history: Dict[str, Any] = Renovate.LoadHistory(self)
         self.changed: bool = False
@@ -103,7 +102,7 @@ class Renovate:
 
             logger.success("Title history not found, created empty file")
         except Exception as e:
-            logger.critical(f"Failed to load title history, {e}")
+            logger.opt(exception=e).critical("Failed to load title history")
 
             exit(1)
 
@@ -135,7 +134,7 @@ class Renovate:
             with open("history.json", "w+") as file:
                 file.write(json.dumps(self.history, indent=4))
         except Exception as e:
-            logger.critical(f"Failed to save title history, {e}")
+            logger.opt(exception=e).critical("Failed to save title history")
 
             exit(1)
 

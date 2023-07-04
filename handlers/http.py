@@ -24,14 +24,14 @@ class HTTP:
 
             return res.json()
         except (JSONDecodeError, UnicodeDecodeError) as e:
-            logger.debug(
-                f"HTTP GET {url} response is not JSON, returning raw text ({e})"
+            logger.opt(exception=e).debug(
+                f"HTTP GET {url} response is not JSON, returning raw text"
             )
 
             return res.text
         except TimeoutException as e:
             # SteamCMD requests often result in a TimeoutException,
             # quietly log and continue on.
-            logger.debug(f"HTTP GET {url} failed, {e}")
+            logger.opt(exception=e).debug(f"HTTP GET {url} failed")
         except Exception as e:
-            logger.error(f"HTTP GET {url} failed, {e}")
+            logger.opt(exception=e).error(f"HTTP GET {url} failed, {e}")

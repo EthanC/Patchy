@@ -16,13 +16,14 @@ Regardless of your chosen setup method, Renovate is intended for use with a task
 
 **Environment Variables:**
 
+-   `LOG_LEVEL`: [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html) severity level to write to the console.
+-   `LOG_DISCORD_WEBHOOK_URL`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive log events.
+-   `LOG_DISCORD_WEBHOOK_LEVEL`: Minimum [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html) severity level to forward to Discord.
 -   `STEAM_TITLES`: Comma-separated list of Steam title IDs to watch.
 -   `BATTLE_TITLES`: Comma-separated list of Battle.net title IDs to watch.
 -   `PROSPERO_TITLES`: Comma-separated list of PlayStation 5 title IDs to watch.
 -   `ORBIS_TITLES`: Comma-separated list of PlayStation 4 title IDs to watch.
--   `DISCORD_NOTIFY_WEBHOOK`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive available update notifications.
--   `DISCORD_LOG_WEBHOOK`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive log events.
--   `DISCORD_LOG_LEVEL`: Minimum [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html) severity level to forward to Discord.
+-   `DISCORD_WEBHOOK_URL`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive available update notifications.
 
 ### Docker (Recommended)
 
@@ -35,13 +36,14 @@ services:
     container_name: renovate
     image: ethanchrisp/renovate:latest
     environment:
+      LOG_LEVEL: INFO
+      LOG_DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY
+      LOG_DISCORD_WEBHOOK_LEVEL: WARNING
       STEAM_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
       BATTLE_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
       PROSPERO_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
       ORBIS_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
-      DISCORD_NOTIFY_WEBHOOK: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
-      DISCORD_LOG_WEBHOOK: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
-      DISCORD_LOG_LEVEL: WARNING
+      DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
 ```
 
 ### Standalone

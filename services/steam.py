@@ -36,8 +36,8 @@ class Steam:
             depots: Dict[str, Any] = data["data"][str(appId)]["depots"]
             current = depots["branches"]["public"]["buildid"]
         except Exception as e:
-            logger.error(
-                f"Failed to determine current version for Steam title {name}, {e}"
+            logger.opt(exception=e).error(
+                f"Failed to determine current version for Steam title {name}"
             )
 
             return
