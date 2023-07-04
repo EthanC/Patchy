@@ -1,6 +1,6 @@
 # Renovate
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Renovate/main.yml?branch=main) ![Docker Pulls](https://img.shields.io/docker/pulls/ethanchrisp/renovate?label=Docker%20Pulls) ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ethanchrisp/renovate/latest?label=Docker%20Image%20Size)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Renovate/ci.yml?branch=main) ![Docker Pulls](https://img.shields.io/docker/pulls/ethanchrisp/renovate?label=Docker%20Pulls) ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ethanchrisp/renovate/latest?label=Docker%20Image%20Size)
 
 Renovate is a Steam, Battle.net, and PlayStation title watcher that reports updates via Discord.
 
