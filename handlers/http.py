@@ -34,4 +34,13 @@ class HTTP:
             # quietly log and continue on.
             logger.opt(exception=e).debug(f"HTTP GET {url} failed")
         except Exception as e:
+            if hasattr(res, "status_code"):
+                if (res.status_code) and (res.status_code == 500):
+                    # SteamCMD frequently returns HTTP 500, resulting
+                    # in log spam. We will assume the risk of silencing
+                    # this particular exception.
+                    logger.opt(exception=e).debug(f"Ignoring HTTP 500 for GET {url}")
+
+                    return
+
             logger.opt(exception=e).error(f"HTTP GET {url} failed, {e}")
