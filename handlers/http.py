@@ -1,5 +1,5 @@
 from json import JSONDecodeError
-from typing import Any, Dict, Optional, Self, Union
+from typing import Any, Self
 
 import httpx
 from httpx import Response, TimeoutException
@@ -9,7 +9,7 @@ from loguru import logger
 class HTTP:
     """HTTP client used to perform web requests."""
 
-    def GET(self: Self, url: str) -> Optional[Union[Dict[str, Any], str]]:
+    def GET(self: Self, url: str) -> dict[str, Any] | str | None:
         """Perform an HTTP GET request and return its response."""
 
         logger.debug(f"HTTP GET {url}")

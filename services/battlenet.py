@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional, Self, Union
+from typing import Any, Self
 
 from discord_webhook import DiscordEmbed
 from loguru import logger
@@ -13,15 +13,15 @@ class Battlenet:
     to the Battle.net platform.
     """
 
-    def IsUpdated(self: Self, titleId: str) -> Union[DiscordEmbed, bool]:
+    def IsUpdated(self: Self, titleId: str) -> DiscordEmbed | bool:
         """
         Fetch the current version of the specified Battle.net title and
         return a Discord embed object if it has updated.
         """
 
-        previous: Optional[str] = self.history["battle"].get(titleId)
+        previous: str | None = self.history["battle"].get(titleId)
 
-        data: Optional[Dict[str, Any]] = HTTP.GET(
+        data: dict[str, Any] | None = HTTP.GET(
             self, f"https://blizztrack.com/api/manifest/{titleId}/versions"
         )
 
@@ -60,7 +60,7 @@ class Battlenet:
         self.history["battle"][titleId] = current
         self.changed = True
 
-        fragments: Optional[Dict[str, Any]] = HTTP.GET(
+        fragments: dict[str, Any] | None = HTTP.GET(
             self, f"https://blizztrack.com/api/fragments/{titleId}"
         )
 
@@ -79,8 +79,8 @@ class Battlenet:
         )
 
     def GetIcon(
-        self: Self, titleId: str, data: Optional[Union[Dict[str, Any], str]]
-    ) -> Optional[str]:
+        self: Self, titleId: str, data: dict[str, Any] | str | None
+    ) -> str | None:
         """Get the icon for the specified Battle.net title."""
 
         if (not data) or (not data.get("success")):
@@ -99,8 +99,8 @@ class Battlenet:
             )
 
     def GetKeyArt(
-        self: Self, titleId: str, data: Optional[Union[Dict[str, Any], str]]
-    ) -> Optional[str]:
+        self: Self, titleId: str, data: dict[str, Any] | str | None
+    ) -> str | None:
         """Get the keyart for the specified Battle.net title."""
 
         if (not data) or (not data.get("success")):
@@ -118,18 +118,18 @@ class Battlenet:
                 f"Failed to get keyart for Battle.net title {titleId}"
             )
 
-    def GetBuild(self: Self, titleId: str, region: str, build: str) -> Optional[str]:
+    def GetBuild(self: Self, titleId: str, region: str, build: str) -> str | None:
         """Get the build name for the specified Battle.net title."""
 
-        data: Optional[Dict[str, Any]] = HTTP.GET(
+        data: dict[str, Any] | None = HTTP.GET(
             self, f"https://blizztrack.com/api/manifest/{titleId}/cdns"
         )
 
         if (not data) or (not data.get("success")):
             return
 
-        path: Optional[str] = None
-        host: Optional[str] = None
+        path: str | None = None
+        host: str | None = None
 
         for entry in data["result"]["data"]:
             if entry["name"].lower() != region.lower():
@@ -144,7 +144,7 @@ class Battlenet:
         # Build the destination URL as the BlizzTrack front-end does.
         # https://github.com/BlizzTrack/BlizzTrack/blob/d10e550bd1588338c39f10f48c744679aef3b62c/BlizzTrack/Pages/Partials/_view_versions.cshtml#L89
         dest: str = f"config/{build[:2]}/{build[2:4]}/{build}"
-        buildConfig: Optional[str] = HTTP.GET(self, f"http://{host}/{path}/{dest}")
+        buildConfig: str | None = HTTP.GET(self, f"http://{host}/{path}/{dest}")
 
         if not buildConfig:
             return
@@ -160,11 +160,11 @@ class Battlenet:
         name: str,
         titleId: str,
         url: str,
-        thumbnail: Optional[str],
+        thumbnail: str | None,
         previous: str,
         current: str,
-        image: Optional[str],
-        build: Optional[str],
+        image: str | None,
+        build: str | None,
         region: str,
         time: str,
     ) -> DiscordEmbed:

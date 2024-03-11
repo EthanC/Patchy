@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional, Self, Union
+from typing import Any, Self
 
 from discord_webhook import DiscordEmbed
 from loguru import logger
@@ -13,15 +13,15 @@ class Steam:
     to the Steam platform.
     """
 
-    def IsUpdated(self: Self, appId: int) -> Union[DiscordEmbed, bool]:
+    def IsUpdated(self: Self, appId: int) -> DiscordEmbed | bool:
         """
         Fetch the current version of the specified Steam title and
         return a Discord embed object if it has updated.
         """
 
-        previous: Optional[str] = self.history["steam"].get(str(appId))
+        previous: str | None = self.history["steam"].get(str(appId))
 
-        data: Optional[Dict[str, Any]] = HTTP.GET(
+        data: dict[str, Any] | None = HTTP.GET(
             self, f"https://api.steamcmd.net/v1/info/{appId}"
         )
 
@@ -30,10 +30,10 @@ class Steam:
 
         name: str = data["data"][str(appId)]["common"]["name"]
         icon: str = data["data"][str(appId)]["common"]["icon"]
-        current: Optional[str] = None
+        current: str | None = None
 
         try:
-            depots: Dict[str, Any] = data["data"][str(appId)]["depots"]
+            depots: dict[str, Any] = data["data"][str(appId)]["depots"]
             current = depots["branches"]["public"]["buildid"]
         except Exception as e:
             logger.opt(exception=e).error(
@@ -77,10 +77,10 @@ class Steam:
         name: str,
         titleId: str,
         url: str,
-        thumbnail: Optional[str],
+        thumbnail: str | None,
         previous: str,
         current: str,
-        image: Optional[str],
+        image: str | None,
     ) -> DiscordEmbed:
         """Build a Discord embed object for a Steam title update."""
 

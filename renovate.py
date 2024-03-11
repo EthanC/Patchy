@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from os import environ
 from sys import exit, stdout
-from typing import Any, Dict, Self
+from typing import Any, Self
 
 import dotenv
 from discord_webhook import DiscordEmbed, DiscordWebhook
@@ -51,7 +51,7 @@ class Renovate:
             logger.success(f"Enabled logging to Discord webhook")
             logger.trace(url)
 
-        self.history: Dict[str, Any] = Renovate.LoadHistory(self)
+        self.history: dict[str, Any] = Renovate.LoadHistory(self)
         self.changed: bool = False
 
         # Steam
@@ -83,14 +83,14 @@ class Renovate:
 
         logger.success("Finished processing titles")
 
-    def LoadHistory(self: Self) -> Dict[str, Any]:
+    def LoadHistory(self: Self) -> dict[str, Any]:
         """Load the last seen title versions specified in history.json"""
 
         try:
             with open("history.json", "r") as file:
-                history: Dict[str, Any] = json.loads(file.read())
+                history: dict[str, Any] = json.loads(file.read())
         except FileNotFoundError:
-            history: Dict[str, Any] = {
+            history: dict[str, Any] = {
                 "steam": {},
                 "battle": {},
                 "prospero": {},

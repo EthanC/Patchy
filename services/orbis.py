@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, Optional, Self, Union
+from typing import Any, Self
 
 from discord_webhook import DiscordEmbed
 from loguru import logger
@@ -13,15 +13,15 @@ class Orbis:
     to the PlayStation 4 platform.
     """
 
-    def IsUpdated(self: Self, titleId: str) -> Union[DiscordEmbed, bool]:
+    def IsUpdated(self: Self, titleId: str) -> DiscordEmbed | bool:
         """
         Fetch the current version of the specified PlayStation 4 title and
         return a Discord embed object if it has updated.
         """
 
-        previous: Optional[str] = self.history["orbis"].get(titleId)
+        previous: str | None = self.history["orbis"].get(titleId)
 
-        data: Optional[Dict[str, Any]] = HTTP.GET(
+        data: dict[str, Any] | None = HTTP.GET(
             self, f"https://orbispatches.com/api/lookup?titleid={titleId}"
         )
 
@@ -67,10 +67,10 @@ class Orbis:
         name: str,
         titleId: str,
         url: str,
-        thumbnail: Optional[str],
+        thumbnail: str | None,
         previous: str,
         current: str,
-        image: Optional[str],
+        image: str | None,
         region: str,
     ) -> DiscordEmbed:
         """Build a Discord embed object for a PlayStation 4 title update."""

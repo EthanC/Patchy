@@ -30,7 +30,6 @@ Regardless of your chosen setup method, Renovate is intended for use with a task
 Modify the following `docker-compose.yml` example file, then run `docker compose up`.
 
 ```yml
-version: "3"
 services:
   renovate:
     container_name: renovate
@@ -48,9 +47,9 @@ services:
 
 ### Standalone
 
-Renovate is built for [Python 3.11](https://www.python.org/) or greater.
+Renovate is built for [Python 3.12](https://www.python.org/) or greater.
 
-1. Install required dependencies using [Poetry](https://python-poetry.org/): `poetry install`
+1. Install required dependencies using [Poetry](https://python-poetry.org/): `poetry install --no-root`
 2. Rename `.env_example` to `.env`, then provide the environment variables.
 3. Start Renovate: `python renovate.py`
 
