@@ -26,7 +26,12 @@ class Steam:
         )
 
         if (not data) or (data.get("status") != "success"):
-            return
+            return False
+
+        if not data["data"][str(appId)].get("common"):
+            logger.warning(f"Failed to fetch Steam app {appId}, no common data")
+
+            return False
 
         name: str = data["data"][str(appId)]["common"]["name"]
         icon: str = data["data"][str(appId)]["common"]["icon"]
