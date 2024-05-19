@@ -154,9 +154,6 @@ class Renovate:
             icon_url="https://i.imgur.com/HMRSQeQ.png",
         )
 
-        if not embed.timestamp:
-            embed.set_timestamp(datetime.now().timestamp())
-
         DiscordWebhook(url=url, embeds=[embed], rate_limit_retry=True).execute()
 
 
