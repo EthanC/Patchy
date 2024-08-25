@@ -1,8 +1,8 @@
 # Renovate
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Renovate/ci.yml?branch=main) ![Docker Pulls](https://img.shields.io/docker/pulls/ethanchrisp/renovate?label=Docker%20Pulls) ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ethanchrisp/renovate/latest?label=Docker%20Image%20Size)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Renovate/ci.yaml?branch=main) ![Docker Pulls](https://img.shields.io/docker/pulls/ethanchrisp/renovate?label=Docker%20Pulls) ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ethanchrisp/renovate/latest?label=Docker%20Image%20Size)
 
-Renovate is a Steam, Battle.net, and PlayStation title watcher that reports updates via Discord.
+Renovate monitors games on Steam, Battle.net, and PlayStation and notifies about updates via Discord.
 
 <p align="center">
     <img src="https://i.imgur.com/XVGizWC.png" draggable="false">
@@ -27,9 +27,9 @@ Regardless of your chosen setup method, Renovate is intended for use with a task
 
 ### Docker (Recommended)
 
-Modify the following `docker-compose.yml` example file, then run `docker compose up`.
+Modify the following `compose.yaml` example file, then run `docker compose up`.
 
-```yml
+```yaml
 services:
   renovate:
     container_name: renovate
@@ -49,7 +49,7 @@ services:
 
 Renovate is built for [Python 3.12](https://www.python.org/) or greater.
 
-1. Install required dependencies using [Poetry](https://python-poetry.org/): `poetry install --no-root`
+1. Install required dependencies using [uv](https://github.com/astral-sh/uv): `uv sync`
 2. Rename `.env_example` to `.env`, then provide the environment variables.
 3. Start Renovate: `python renovate.py`
 
