@@ -1,11 +1,8 @@
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Output
-history.json
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!src/
+!docker-entrypoint.sh
+**/__pycache__

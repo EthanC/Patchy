@@ -1,0 +1,60 @@
+# Patchy configuration. Copy this file to config.toml and edit it.
+#
+# Every value can also be set with an environment variable named PATCHY_ followed
+# by the key path joined with double underscores, for example:
+#
+#   PATCHY_INTERVAL=30
+#   PATCHY_DISCORD__WEBHOOK_URL=https://discord.com/api/webhooks/...
+#   PATCHY_PLATFORMS__STEAM__TITLES=730,440
+#
+# Environment variables take precedence over this file.
+
+# Minutes between checks. 0 checks once and exits, for use with cron.
+interval = 0
+
+# Check titles without saving versions or sending notifications.
+dry_run = false
+
+[log]
+# TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, or CRITICAL.
+level = "INFO"
+# Optionally forward logs at or above discord_level to a Discord webhook.
+# discord_webhook_url = "https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY"
+discord_level = "WARNING"
+
+[discord]
+# Where update notifications are posted.
+webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
+username = "Patchy"
+# avatar_url = "https://example.com/avatar.png"
+
+[database]
+path = "patchy.db"
+
+[http]
+# Seconds to wait for upstream services, and retries for transient failures.
+timeout = 30
+retries = 3
+
+# Each platform accepts `titles` (a list of IDs) and `enabled` (default true).
+# Run `patchy platforms` to list every available platform.
+
+[platforms.steam]
+# Steam app IDs, from store.steampowered.com/app/<id> or steamdb.info.
+titles = ["730"]
+# Depot branch whose build ID is tracked.
+branch = "public"
+
+[platforms.battlenet]
+# BlizzTrack product codes, from blizztrack.com.
+titles = ["wow"]
+# Region whose version is tracked. Falls back to the first region listed.
+region = "Americas"
+
+[platforms.prospero]
+# PlayStation 5 title IDs, from prosperopatches.com.
+titles = ["PPSA01284"]
+
+[platforms.orbis]
+# PlayStation 4 title IDs, from orbispatches.com.
+titles = ["CUSA00419"]

@@ -161,10 +161,7 @@ class TestPlayStation:
             make_platform("orbis").fetch("CUSA00000")
 
     def test_normalizes_ids(self, make_platform: MakePlatform) -> None:
-        assert (
-            make_platform("orbis").normalize_title_id(" cusa00419 ")
-            == "CUSA00419"
-        )
+        assert make_platform("orbis").normalize_title_id(" cusa00419 ") == "CUSA00419"
 
         with pytest.raises(ConfigError):
             make_platform("orbis").normalize_title_id("12345")

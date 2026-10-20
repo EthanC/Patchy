@@ -1,57 +1,91 @@
-# Renovate
+# Patchy
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Renovate/ci.yaml?branch=main) ![Docker Pulls](https://img.shields.io/docker/pulls/ethanchrisp/renovate?label=Docker%20Pulls) ![Docker Image Size (tag)](https://img.shields.io/docker/image-size/ethanchrisp/renovate/latest?label=Docker%20Image%20Size)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/EthanC/Patchy/ci.yaml?branch=main) ![Python](https://img.shields.io/badge/python-3.15-blue)
 
-Renovate monitors games on Steam, Battle.net, and PlayStation and notifies about updates via Discord.
+Patchy monitors games on Steam, Battle.net, and PlayStation and notifies about updates via Discord.
 
-<p align="center">
-    <img src="https://i.imgur.com/XVGizWC.png" draggable="false">
-</p>
+Patchy is the successor to Renovate. It checks each configured title's current version, remembers it in a SQLite database, and posts a Discord message when the version changes.
 
 ## Setup
 
-A [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) is recommended for notifications.
+A [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) is required to receive update notifications.
 
-Regardless of your chosen setup method, Renovate is intended for use with a task scheduler, such as [cron](https://crontab.guru/).
+Patchy is configured with a `config.toml` file, environment variables, or both. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it; every option is documented there.
 
-**Environment Variables:**
+Any option can instead be set with an environment variable named `PATCHY_` followed by the option's path joined with double underscores. Environment variables take precedence over `config.toml`. Lists accept comma-separated values.
 
--   `LOG_LEVEL`: [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html) severity level to write to the console.
--   `LOG_DISCORD_WEBHOOK_URL`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive log events.
--   `LOG_DISCORD_WEBHOOK_LEVEL`: Minimum [Loguru](https://loguru.readthedocs.io/en/stable/api/logger.html) severity level to forward to Discord.
--   `STEAM_TITLES`: Comma-separated list of Steam title IDs to watch.
--   `BATTLE_TITLES`: Comma-separated list of Battle.net title IDs to watch.
--   `PROSPERO_TITLES`: Comma-separated list of PlayStation 5 title IDs to watch.
--   `ORBIS_TITLES`: Comma-separated list of PlayStation 4 title IDs to watch.
--   `DISCORD_WEBHOOK_URL`: [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) URL to receive available update notifications.
+| Option                   | Environment Variable                   | Description                                                     |
+| ------------------------ | -------------------------------------- | --------------------------------------------------------------- |
+| `interval`               | `PATCHY_INTERVAL`                      | Minutes between checks. `0` (default) checks once and exits.    |
+| `dry_run`                | `PATCHY_DRY_RUN`                       | Check titles without saving versions or sending notifications. |
+| `log.level`              | `PATCHY_LOG__LEVEL`                    | Console [log level](https://loguru.readthedocs.io/en/stable/api/logger.html). Default `INFO`. |
+| `log.discord_webhook_url`| `PATCHY_LOG__DISCORD_WEBHOOK_URL`      | Discord Webhook URL to forward log events to.                   |
+| `log.discord_level`      | `PATCHY_LOG__DISCORD_LEVEL`            | Minimum level forwarded to Discord. Default `WARNING`.          |
+| `discord.webhook_url`    | `PATCHY_DISCORD__WEBHOOK_URL`          | Discord Webhook URL to post update notifications to.            |
+| `database.path`          | `PATCHY_DATABASE__PATH`                | SQLite database location. Default `patchy.db`.                  |
+| `platforms.steam.titles` | `PATCHY_PLATFORMS__STEAM__TITLES`      | Steam app IDs to watch.                                         |
+| `platforms.battlenet.titles` | `PATCHY_PLATFORMS__BATTLENET__TITLES` | Battle.net (BlizzTrack) product codes to watch.              |
+| `platforms.prospero.titles` | `PATCHY_PLATFORMS__PROSPERO__TITLES` | PlayStation 5 title IDs to watch.                              |
+| `platforms.orbis.titles` | `PATCHY_PLATFORMS__ORBIS__TITLES`      | PlayStation 4 title IDs to watch.                               |
+
+The first time Patchy sees a title it records the current version without notifying. Later checks notify only when the version changes. A notification that fails to send is retried on the next check.
 
 ### Docker (Recommended)
 
-Modify the following `compose.yaml` example file, then run `docker compose up`.
+Images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`. Patchy stores `config.toml` and `patchy.db` in the `/data` volume and runs as the user and group set by `PUID` and `PGID` (default `1000`).
+
+Modify the following `compose.yaml` example file, then run `docker compose up -d`.
 
 ```yaml
 services:
-  renovate:
-    container_name: renovate
-    image: ethanchrisp/renovate:latest
+  patchy:
+    container_name: patchy
+    image: ghcr.io/ethanc/patchy:latest
+    restart: unless-stopped
     environment:
-      LOG_LEVEL: INFO
-      LOG_DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY
-      LOG_DISCORD_WEBHOOK_LEVEL: WARNING
-      STEAM_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
-      BATTLE_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
-      PROSPERO_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
-      ORBIS_TITLES: XXXXXXXX,YYYYYYYY,ZZZZZZZZ
-      DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
+      PUID: 1000
+      PGID: 1000
+      TZ: America/New_York
+      PATCHY_INTERVAL: 30
+      PATCHY_DISCORD__WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
+      PATCHY_PLATFORMS__STEAM__TITLES: 730,440
+      PATCHY_PLATFORMS__PROSPERO__TITLES: PPSA01284
+    volumes:
+      - ./data:/data
 ```
+
+To use cron or another scheduler instead, leave `PATCHY_INTERVAL` unset and run the container on your schedule without `restart`.
 
 ### Standalone
 
-Renovate is built for [Python 3.12](https://www.python.org/) or greater.
+Patchy requires [Python 3.15](https://www.python.org/) and [uv](https://github.com/astral-sh/uv).
 
-1. Install required dependencies using [uv](https://github.com/astral-sh/uv): `uv sync`
-2. Rename `.env_example` to `.env`, then provide the environment variables.
-3. Start Renovate: `python renovate.py`
+1. Install dependencies: `uv sync --no-dev`
+2. Copy `config.example.toml` to `config.toml`, then fill it in.
+3. Start Patchy: `uv run patchy`
+
+Run `uv run patchy --help` for every command and option.
+
+### Migrating from Renovate
+
+Patchy can import Renovate's `history.json` so titles you already track aren't reported as new:
+
+```sh
+uv run patchy import-history path/to/history.json
+# or, with Docker
+docker compose run --rm patchy patchy import-history /data/history.json
+```
+
+Renovate's `STEAM_TITLES`, `BATTLE_TITLES`, `PROSPERO_TITLES`, and `ORBIS_TITLES` become `PATCHY_PLATFORMS__STEAM__TITLES`, `PATCHY_PLATFORMS__BATTLENET__TITLES`, `PATCHY_PLATFORMS__PROSPERO__TITLES`, and `PATCHY_PLATFORMS__ORBIS__TITLES`.
+
+## Development
+
+See [AGENTS.md](AGENTS.md) for the project layout, conventions, and how to add a platform.
+
+```sh
+uv sync
+uv run ruff format && uv run ruff check && uv run ty check && uv run pytest
+```
 
 ## Credits
 
