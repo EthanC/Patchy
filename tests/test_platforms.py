@@ -283,3 +283,8 @@ def test_titles_are_normalized_and_deduplicated(make_platform: MakePlatform) -> 
     platform = make_platform("prospero", titles=["ppsa01284", "PPSA01284", "bad"])
 
     assert platform.titles == ["PPSA01284"]
+
+
+def test_playstation_names_include_codenames() -> None:
+    assert registry()["prospero"].name == "PlayStation 5 (Prospero)"
+    assert registry()["orbis"].name == "PlayStation 4 (Orbis)"
