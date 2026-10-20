@@ -24,7 +24,10 @@ def make_update(**release: Any) -> Update:  # noqa: ANN401
         "icon_url": "https://cdn.example/icon.jpg",
         "image_url": "https://cdn.example/header.jpg",
         "released_at": datetime(2026, 10, 16, tzinfo=UTC),
-        "details": {"Build Name": "WOW-1"},
+        "details": {
+            "Build Name": "WOW-1",
+            "Depots": ("Windows +1.0 MB", "Linux added"),
+        },
     }
 
     return Update(
@@ -52,15 +55,41 @@ def test_builds_valid_components(release: dict[str, Any]) -> None:
 
     # Clyde enforces Discord's limits (component counts, lengths) on decode.
     data = payload(webhook)
-    [container] = data["components"]
+    container, _buttons = data["components"]
     msgspec.json.decode(msgspec.json.encode(container), type=Container)
 
     assert "username" not in data
     assert "avatar_url" not in data
     assert container["accent_color"] == Steam.color
+    assert all(c["type"] != 1 for c in container["components"]), (
+        "buttons sit below the container"
+    )
     text = msgspec.json.encode(container).decode()
     assert "- 20480000" in text
     assert "+ 20480931" in text
+
+
+def test_layout() -> None:
+    data = payload(DiscordNotifier(WEBHOOK_URL).build(make_update()))
+    container, buttons = data["components"]
+    text = msgspec.json.encode(container).decode()
+
+    assert [(b["label"], b["url"]) for b in buttons["components"]] == [
+        ("View on SteamDB", "https://steamdb.info/app/730/patchnotes/"),
+        ("Powered by Patchy", "https://github.com/EthanC/Patchy"),
+    ]
+    assert "**Build Name**\\n`WOW-1`" in text
+    assert "**Depots**\\n- Windows +1.0 MB\\n- Linux added" in text
+    assert '"description":"Counter-Strike 2 icon"' in text
+    assert '"description":"Counter-Strike 2 artwork"' in text
+
+
+def test_buttons_without_release_url() -> None:
+    data = payload(DiscordNotifier(WEBHOOK_URL).build(make_update(url=None)))
+
+    assert [b["label"] for b in data["components"][1]["components"]] == [
+        "Powered by Patchy"
+    ]
 
 
 def test_send_wraps_delivery_errors(monkeypatch: pytest.MonkeyPatch) -> None:

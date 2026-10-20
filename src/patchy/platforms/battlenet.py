@@ -92,6 +92,7 @@ class Battlenet(Platform[BattlenetSettings]):
 
     key: ClassVar[str] = "battlenet"
     name: ClassVar[str] = "Battle.net"
+    source: ClassVar[str] = "BlizzTrack"
     color: ClassVar[int] = 0x148EFF
     icon_url: ClassVar[str | None] = "https://i.imgur.com/dI6bDr7.png"
     settings_model: ClassVar[type[PlatformSettings]] = BattlenetSettings

@@ -12,6 +12,7 @@ lazy from types import FrameType
 
 from loguru import logger
 
+from patchy import PROJECT_URL
 from patchy.client import HttpClient
 from patchy.config import EnvironmentSettings, FileSettings, LogSettings
 from patchy.database import Database
@@ -125,7 +126,7 @@ def _run(
 ) -> None:
     """Check titles once, or repeatedly when an interval is configured."""
     logger.info("Patchy")
-    logger.info("https://github.com/EthanC/Patchy")
+    logger.info(PROJECT_URL)
 
     if dry_run:
         logger.warning("Dry run, versions will not be saved and nothing will be sent")

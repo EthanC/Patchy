@@ -120,8 +120,10 @@ class TestSteam:
 
         assert release.details == {
             "Depots": (
-                "Windows +120.4 MB, Counter-Strike 2 Mac Legacy added, "
-                "Windows/Linux (French) changed, Windows (German) removed"
+                "Windows +120.4 MB",
+                "Counter-Strike 2 Mac Legacy added",
+                "Windows/Linux (French) changed",
+                "Windows (German) removed",
             )
         }
 
@@ -136,7 +138,7 @@ class TestSteam:
 
         release = platform.enrich(platform.fetch("730"), json.dumps(previous))
 
-        assert release.details["Depots"].endswith("Old 3 removed, 6 more")
+        assert release.details["Depots"][-2:] == ("Old 3 removed", "6 more")
 
     @pytest.mark.parametrize("previous_state", [None, "not json", '{"depots": 5}'])
     def test_enrich_without_usable_previous_state(

@@ -20,8 +20,10 @@ from clyde.components import (
 from loguru import logger
 lazy from clyde.components.container import ContainerComponent
 
+from patchy import PROJECT_URL
 from patchy.errors import NotificationError
 lazy from patchy.platforms import Platform, Update
+lazy from patchy.platforms.base import Detail
 
 REQUEST_POLICY: RequestPolicy = RequestPolicy(
     connect_timeout=10.0,
@@ -92,6 +94,7 @@ class DiscordNotifier:
         webhook: Webhook = Webhook(url=self.webhook_url)
 
         webhook.add_component(build_container(update))
+        webhook.add_component(build_buttons(update))
 
         return webhook
 
@@ -143,7 +146,10 @@ def build_container(update: Update) -> Container:
         components.append(
             Section(
                 components=[heading],
-                accessory=Thumbnail(media=media(release.icon_url, now)),
+                accessory=Thumbnail(
+                    media=media(release.icon_url, now),
+                    description=f"{release.name} icon",
+                ),
             )
         )
     else:
@@ -161,7 +167,7 @@ def build_container(update: Update) -> Container:
         components.append(
             TextDisplay(
                 content="\n".join(
-                    f"{Markdown.bold(label)}\n{Markdown.inline_code(value)}"
+                    f"{Markdown.bold(label)}\n{format_detail(value)}"
                     for label, value in release.details.items()
                 )
             )
@@ -169,7 +175,14 @@ def build_container(update: Update) -> Container:
 
     if release.image_url is not None:
         components.append(
-            MediaGallery(items=[MediaGalleryItem(media=media(release.image_url, now))])
+            MediaGallery(
+                items=[
+                    MediaGalleryItem(
+                        media=media(release.image_url, now),
+                        description=f"{release.name} artwork",
+                    )
+                ]
+            )
         )
 
     components.append(Seperator())
@@ -183,12 +196,38 @@ def build_container(update: Update) -> Container:
         )
     )
 
-    if release.url is not None:
-        components.append(
-            ActionRow(components=[LinkButton(label="View Details", url=release.url)])
+    return Container(components=components).set_accent_color(update.platform.color)
+
+
+def build_buttons(update: Update) -> ActionRow:
+    """Lay out the link buttons shown below an update's container.
+
+    Args:
+        update: The detected update.
+
+    Returns:
+        A row with a link to the release, when it has one, and to Patchy.
+    """
+    buttons: list[LinkButton] = []
+
+    if update.release.url is not None:
+        buttons.append(
+            LinkButton(
+                label=f"View on {update.platform.source}", url=update.release.url
+            )
         )
 
-    return Container(components=components).set_accent_color(update.platform.color)
+    buttons.append(LinkButton(label="Powered by Patchy", url=PROJECT_URL))
+
+    return ActionRow(components=buttons)
+
+
+def format_detail(value: Detail) -> str:
+    """Show a single detail value as code and a list of entries as bullets."""
+    if isinstance(value, str):
+        return Markdown.inline_code(value)
+
+    return Markdown.bulleted_list(value)
 
 
 def media(url: str, now: datetime) -> UnfurledMediaItem:

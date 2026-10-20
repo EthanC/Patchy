@@ -22,6 +22,9 @@ def _blank_to_none(value: object) -> object:
     return value
 
 
+type Detail = str | tuple[str, ...]
+"""A notification detail: a single value, shown as code, or a list of entries."""
+
 type OptionalText = Annotated[str | None, BeforeValidator(_blank_to_none)]
 """An optional string field in an upstream response where ``""`` means missing."""
 
@@ -66,8 +69,9 @@ class Release:
     released_at: datetime | None = None
     """When the platform published this version, if known."""
 
-    details: Mapping[str, str] = field(default_factory=dict)
-    """Additional labelled values to show in notifications, such as a build name."""
+    details: Mapping[str, Detail] = field(default_factory=dict)
+    """Additional labelled values to show in notifications, such as a build name or
+    a list of changed depots."""
 
     context: Mapping[str, str] = field(default_factory=dict, repr=False)
     """Platform-private values passed from ``fetch()`` to ``enrich()``. Never shown."""
@@ -80,9 +84,9 @@ class Release:
     The format is up to the platform; serialize it with a Pydantic model.
     """
 
-    def with_details(self: Self, **details: str | None) -> Self:
+    def with_details(self: Self, **details: Detail | None) -> Self:
         """Return a copy with extra details added, skipping ``None`` values."""
-        merged: dict[str, str] = dict(self.details)
+        merged: dict[str, Detail] = dict(self.details)
         merged.update({k: v for k, v in details.items() if v is not None})
 
         return replace(self, details=merged)
@@ -110,6 +114,9 @@ class Platform[S: PlatformSettings](ABC):
 
     name: ClassVar[str]
     """Display name."""
+
+    source: ClassVar[str]
+    """Name of the site ``Release.url`` links to, shown as "View on <source>"."""
 
     color: ClassVar[int]
     """Accent color for notifications, as a 24-bit RGB integer."""

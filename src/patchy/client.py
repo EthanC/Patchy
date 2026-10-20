@@ -8,9 +8,10 @@ from loguru import logger
 from niquests import RetryConfiguration
 from pydantic import BaseModel, ValidationError
 
+from patchy import PROJECT_URL
 from patchy.errors import FetchError, PayloadError
 
-USER_AGENT: str = "Patchy (+https://github.com/EthanC/Patchy)"
+USER_AGENT: str = f"Patchy (+{PROJECT_URL})"
 
 # Upstream services (SteamCMD in particular) frequently answer with transient
 # 5xx responses, so these are retried with backoff before being reported.

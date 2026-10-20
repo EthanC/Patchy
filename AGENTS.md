@@ -72,7 +72,7 @@ Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` 
 1. Create `src/patchy/platforms/<name>.py`. No other file needs to change for the platform to be discovered.
 2. Describe each upstream response with `UpstreamModel` subclasses (prefixed `_`, private to the module). Use `OptionalText` for optional strings that upstream may send as `""`. Fetch with `self.client.get_model(url, Model)`, which validates the response and raises `PayloadError` on mismatch.
 3. If the platform needs options beyond `name`, `enabled`, `webhook_url`, and `titles`, subclass `PlatformSettings` and set `settings_model`. Options apply per instance.
-4. Subclass `Platform[YourSettings]`, set `key` (lowercase, used in `config.toml` and the database, so never change it once released), `name`, `color`, and `icon_url`, then decorate with `@register`.
+4. Subclass `Platform[YourSettings]`, set `key` (lowercase, used in `config.toml` and the database, so never change it once released), `name`, `source` (the site `Release.url` links to, shown as "View on <source>"), `color`, and `icon_url`, then decorate with `@register`. Details are a single string (shown as code) or a tuple of entries (shown as a bulleted list).
 5. Implement `fetch()` with the minimum requests needed to read the version. Put extra requests for notifications in `enrich()`. Override `normalize_title_id()` to reject or canonicalize IDs.
    To describe what changed between versions, set `Release.state` in `fetch()` to a JSON string from a private Pydantic model. Patchy stores it with the title and passes the previous one to `enrich()` as `previous_state`, which is `None` for titles stored before the platform set any; treat unreadable state as missing.
 6. Add fixtures under `tests/fixtures/` and tests in `tests/test_platforms.py` using `client.serve(url, fixture)`. Update `test_registry_discovers_every_platform`.
@@ -83,6 +83,7 @@ Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` 
 class Example(Platform[PlatformSettings]):
     key: ClassVar[str] = "example"
     name: ClassVar[str] = "Example"
+    source: ClassVar[str] = "Example.com"
     color: ClassVar[int] = 0x123456
     icon_url: ClassVar[str | None] = None
 

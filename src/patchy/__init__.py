@@ -2,3 +2,5 @@
 
 https://github.com/EthanC/Patchy
 """
+
+PROJECT_URL: str = "https://github.com/EthanC/Patchy"

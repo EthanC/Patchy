@@ -128,6 +128,7 @@ class Steam(Platform[SteamSettings]):
 
     key: ClassVar[str] = "steam"
     name: ClassVar[str] = "Steam"
+    source: ClassVar[str] = "SteamDB"
     color: ClassVar[int] = 0x1B2838
     icon_url: ClassVar[str | None] = "https://i.imgur.com/oYkhH6s.png"
     settings_model: ClassVar[type[PlatformSettings]] = SteamSettings
@@ -218,7 +219,7 @@ class Steam(Platform[SteamSettings]):
         return release.with_details(Depots=describe_depots(previous, current))
 
 
-def describe_depots(previous: _State, current: _State) -> str | None:
+def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None:
     """Summarize which depots were added, removed, or changed between two states.
 
     Args:
@@ -226,9 +227,9 @@ def describe_depots(previous: _State, current: _State) -> str | None:
         current: The depots of the new version.
 
     Returns:
-        One line such as ``Windows +120.4 MB, Linux added, Mac changed``, or
-        ``None`` when no depot changed. ``changed`` means the size is the same or
-        unknown.
+        One entry per depot, such as ``Windows +120.4 MB``, ``Linux added``, or
+        ``Mac changed``, or ``None`` when no depot changed. ``changed`` means the
+        size is the same or unknown.
     """
     changes: list[str] = []
 
@@ -260,7 +261,7 @@ def describe_depots(previous: _State, current: _State) -> str | None:
         hidden: int = len(changes) - MAX_LISTED_DEPOTS
         changes = [*changes[:MAX_LISTED_DEPOTS], f"{hidden} more"]
 
-    return ", ".join(changes)
+    return tuple(changes)
 
 
 def format_size(size: int, *, signed: bool = False) -> str:

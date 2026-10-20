@@ -74,6 +74,7 @@ class Prospero(PlayStation):
 
     key: ClassVar[str] = "prospero"
     name: ClassVar[str] = "PlayStation 5"
+    source: ClassVar[str] = "PROSPEROPatches"
     color: ClassVar[int] = 0x00439C
     icon_url: ClassVar[str | None] = "https://i.imgur.com/ccNqLcb.png"
     site_url: ClassVar[str] = "https://prosperopatches.com"
@@ -85,6 +86,7 @@ class Orbis(PlayStation):
 
     key: ClassVar[str] = "orbis"
     name: ClassVar[str] = "PlayStation 4"
+    source: ClassVar[str] = "ORBISPatches"
     color: ClassVar[int] = 0x00439C
     icon_url: ClassVar[str | None] = "https://i.imgur.com/ccNqLcb.png"
     site_url: ClassVar[str] = "https://orbispatches.com"
