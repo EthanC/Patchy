@@ -24,7 +24,7 @@ uv run patchy --help       # run the CLI
 ```
 src/patchy/
   __main__.py      CLI (argparse): run, import-history, platforms. Signal handling and the interval loop.
-  config.py        Settings: config.toml + PATCHY_* env vars via pydantic-settings. PlatformSettings base.
+  config.py        Settings: config.toml + PATCHY_* env vars via pydantic-settings. [platforms.*] is TOML-only. PlatformSettings base.
   client.py        HttpClient: niquests session with retries; raises FetchError / PayloadError only.
   database.py      SQLModel tables (TitleRecord, UpdateRecord) and the Database wrapper.
   errors.py        PatchyError hierarchy. Every expected failure is one of these.
@@ -86,7 +86,7 @@ class Example(Platform[PlatformSettings]):
 ## Adding other features
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
-- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README.
+- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README. Platform settings (titles included) are read from `config.toml` only; `_TomlOnly` rejects them from environment variables, so don't document env equivalents for them.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.
 

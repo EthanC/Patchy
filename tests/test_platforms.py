@@ -174,10 +174,6 @@ def test_invalid_platform_settings_raise_config_error(
         make_platform("steam", titles=["730"], bogus=True)
 
 
-def test_titles_accept_comma_separated_strings(make_platform: MakePlatform) -> None:
-    assert make_platform("steam", titles="730, 440,730").titles == ["730", "440"]
-
-
 def test_titles_are_normalized_and_deduplicated(make_platform: MakePlatform) -> None:
     platform = make_platform("prospero", titles=["ppsa01284", "PPSA01284", "bad"])
 

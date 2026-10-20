@@ -10,9 +10,9 @@ Patchy is the successor to Renovate. It checks each configured title's current v
 
 A [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) is required to receive update notifications.
 
-Patchy is configured with a `config.toml` file, environment variables, or both. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it; every option is documented there.
+Patchy is configured with a `config.toml` file. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it; every option is documented there.
 
-Any option can instead be set with an environment variable named `PATCHY_` followed by the option's path joined with double underscores. Environment variables take precedence over `config.toml`. Lists accept comma-separated values.
+The titles to watch, and every other `[platforms.*]` setting, live in `config.toml` only. Any other option can also be set with an environment variable named `PATCHY_` followed by the option's path joined with double underscores, which takes precedence over `config.toml`.
 
 | Option                   | Environment Variable                   | Description                                                     |
 | ------------------------ | -------------------------------------- | --------------------------------------------------------------- |
@@ -23,18 +23,18 @@ Any option can instead be set with an environment variable named `PATCHY_` follo
 | `log.discord_level`      | `PATCHY_LOG__DISCORD_LEVEL`            | Minimum level forwarded to Discord. Default `WARNING`.          |
 | `discord.webhook_url`    | `PATCHY_DISCORD__WEBHOOK_URL`          | Discord Webhook URL to post update notifications to.            |
 | `database.path`          | `PATCHY_DATABASE__PATH`                | SQLite database location. Default `patchy.db`.                  |
-| `platforms.steam.titles` | `PATCHY_PLATFORMS__STEAM__TITLES`      | Steam app IDs to watch.                                         |
-| `platforms.battlenet.titles` | `PATCHY_PLATFORMS__BATTLENET__TITLES` | Battle.net (BlizzTrack) product codes to watch.              |
-| `platforms.prospero.titles` | `PATCHY_PLATFORMS__PROSPERO__TITLES` | PlayStation 5 title IDs to watch.                              |
-| `platforms.orbis.titles` | `PATCHY_PLATFORMS__ORBIS__TITLES`      | PlayStation 4 title IDs to watch.                               |
+| `platforms.steam.titles` | `config.toml` only                     | Steam app IDs to watch.                                         |
+| `platforms.battlenet.titles` | `config.toml` only                 | Battle.net (BlizzTrack) product codes to watch.                 |
+| `platforms.prospero.titles` | `config.toml` only                  | PlayStation 5 title IDs to watch.                               |
+| `platforms.orbis.titles` | `config.toml` only                     | PlayStation 4 title IDs to watch.                               |
 
 The first time Patchy sees a title it records the current version without notifying. Later checks notify only when the version changes. A notification that fails to send is retried on the next check.
 
 ### Docker (Recommended)
 
-Images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`. Patchy stores `config.toml` and `patchy.db` in the `/data` volume and runs as the user and group set by `PUID` and `PGID` (default `1000`).
+Images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`. Patchy reads `config.toml` from, and stores `patchy.db` in, the `/data` volume, and runs as the user and group set by `PUID` and `PGID` (default `1000`).
 
-Modify the following `compose.yaml` example file, then run `docker compose up -d`.
+Place your `config.toml` in `./data`, modify the following `compose.yaml` example file, then run `docker compose up -d`.
 
 ```yaml
 services:
@@ -48,8 +48,6 @@ services:
       TZ: America/New_York
       PATCHY_INTERVAL: 30
       PATCHY_DISCORD__WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
-      PATCHY_PLATFORMS__STEAM__TITLES: 730,440
-      PATCHY_PLATFORMS__PROSPERO__TITLES: PPSA01284
     volumes:
       - ./data:/data
 ```
@@ -76,7 +74,7 @@ uv run patchy import-history path/to/history.json
 docker compose run --rm patchy patchy import-history /data/history.json
 ```
 
-Renovate's `STEAM_TITLES`, `BATTLE_TITLES`, `PROSPERO_TITLES`, and `ORBIS_TITLES` become `PATCHY_PLATFORMS__STEAM__TITLES`, `PATCHY_PLATFORMS__BATTLENET__TITLES`, `PATCHY_PLATFORMS__PROSPERO__TITLES`, and `PATCHY_PLATFORMS__ORBIS__TITLES`.
+Renovate's `STEAM_TITLES`, `BATTLE_TITLES`, `PROSPERO_TITLES`, and `ORBIS_TITLES` become the `titles` lists under `[platforms.steam]`, `[platforms.battlenet]`, `[platforms.prospero]`, and `[platforms.orbis]` in `config.toml`.
 
 ## Development
 

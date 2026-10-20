@@ -36,21 +36,38 @@ def test_environment_overrides_toml(
         [log]
         level = "debug"
 
+        [discord]
+        webhook_url = "https://discord.com/api/webhooks/1/toml"
+
         [platforms.steam]
         titles = ["730"]
         branch = "beta"
         """,
     )
     monkeypatch.setenv("PATCHY_INTERVAL", "30")
-    monkeypatch.setenv("PATCHY_PLATFORMS__STEAM__TITLES", "440,570")
-    monkeypatch.setenv("PATCHY_PLATFORMS__BATTLENET__TITLES", "wow")
+    monkeypatch.setenv(
+        "PATCHY_DISCORD__WEBHOOK_URL", "https://discord.com/api/webhooks/1/env"
+    )
 
     settings = Settings.load(path)
 
     assert settings.interval == 30
     assert settings.log.level == "DEBUG"
-    assert settings.platforms["steam"] == {"titles": "440,570", "branch": "beta"}
-    assert settings.platforms["battlenet"] == {"titles": "wow"}
+    assert str(settings.discord.webhook_url) == "https://discord.com/api/webhooks/1/env"
+    assert settings.platforms["steam"] == {"titles": ["730"], "branch": "beta"}
+
+
+@pytest.mark.parametrize("source", ["env", "dotenv"])
+def test_platforms_cannot_come_from_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: str
+) -> None:
+    if source == "env":
+        monkeypatch.setenv("PATCHY_PLATFORMS__STEAM__TITLES", "440")
+    else:
+        (tmp_path / ".env").write_text("PATCHY_PLATFORMS__STEAM__TITLES=440\n")
+
+    with pytest.raises(ConfigError, match=r"must be configured in config\.toml"):
+        Settings.load(write(tmp_path, '[platforms.steam]\ntitles = ["730"]\n'))
 
 
 def test_invalid_values_are_reported_together(tmp_path: Path) -> None:

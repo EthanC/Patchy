@@ -2,8 +2,10 @@
 
 Precedence, highest first: environment variables, a ``.env`` file, ``config.toml``,
 then defaults. Environment variables use the ``PATCHY_`` prefix and ``__`` between
-nested keys, for example ``PATCHY_DISCORD__WEBHOOK_URL`` or
-``PATCHY_PLATFORMS__STEAM__TITLES``.
+nested keys, for example ``PATCHY_DISCORD__WEBHOOK_URL``.
+
+Titles and other platform settings are the exception: they are read from
+``config.toml`` only, and setting them in the environment is a configuration error.
 """
 
 import tomllib
@@ -20,10 +22,10 @@ from pydantic import (
 )
 from pydantic_settings import (
     BaseSettings,
-    NoDecode,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+lazy from pydantic.fields import FieldInfo
 
 from patchy.errors import ConfigError
 
@@ -32,18 +34,6 @@ DEFAULT_CONFIG_PATH: Path = Path("config.toml")
 type LogLevel = Literal[
     "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
 ]
-
-
-def split_list(value: object) -> object:
-    """Accept a comma-separated string wherever a list of strings is expected.
-
-    Environment variables cannot express TOML arrays, so ``"730, 440"`` is treated
-    the same as ``["730", "440"]``.
-    """
-    if isinstance(value, str):
-        return [item.strip() for item in value.split(",") if item.strip()]
-
-    return value
 
 
 class LogSettings(BaseModel):
@@ -97,12 +87,7 @@ class PlatformSettings(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     enabled: bool = True
-    titles: Annotated[list[str], NoDecode] = Field(default_factory=list)
-
-    @field_validator("titles", mode="before")
-    @classmethod
-    def _split_titles(cls, value: object) -> object:
-        return split_list(value)
+    titles: list[str] = Field(default_factory=list)
 
     @field_validator("titles")
     @classmethod
@@ -132,7 +117,10 @@ class Settings(BaseSettings):
     http: HttpSettings = Field(default_factory=HttpSettings)
 
     platforms: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    """Raw settings per platform key, validated by each platform's own model."""
+    """Raw settings per platform key, validated by each platform's own model.
+
+    Read from ``config.toml`` only.
+    """
 
     @field_validator("platforms", mode="before")
     @classmethod
@@ -155,9 +143,15 @@ class Settings(BaseSettings):
         """Rank environment variables above values passed in from ``config.toml``.
 
         ``load()`` passes the TOML document as initialization arguments, so those are
-        placed beneath the environment rather than above it.
+        placed beneath the environment rather than above it. Environment sources are
+        barred from setting platforms.
         """
-        return (env_settings, dotenv_settings, init_settings, file_secret_settings)
+        return (
+            _TomlOnly(env_settings, "platforms"),
+            _TomlOnly(dotenv_settings, "platforms"),
+            init_settings,
+            file_secret_settings,
+        )
 
     @classmethod
     def load(cls, path: Path = DEFAULT_CONFIG_PATH) -> Self:
@@ -186,6 +180,38 @@ class Settings(BaseSettings):
             return cls(**document)
         except ValidationError as e:
             raise ConfigError(_describe(e)) from e
+
+
+class _TomlOnly(PydanticBaseSettingsSource):
+    """Wrap an environment source so it cannot set a field reserved for TOML."""
+
+    def __init__(
+        self: Self, source: PydanticBaseSettingsSource, field_name: str
+    ) -> None:
+        super().__init__(source.settings_cls)
+
+        self._source: PydanticBaseSettingsSource = source
+        self._field_name: str = field_name
+
+    @override
+    def get_field_value(
+        self: Self, field: FieldInfo, field_name: str
+    ) -> tuple[Any, str, bool]:
+        return self._source.get_field_value(field, field_name)
+
+    @override
+    def __call__(self: Self) -> dict[str, Any]:
+        values: dict[str, Any] = self._source()
+
+        if self._field_name in values:
+            msg: str = (
+                f"{self._field_name} must be configured in config.toml, not with "
+                f"PATCHY_{self._field_name.upper()}__* environment variables"
+            )
+
+            raise ConfigError(msg)
+
+        return values
 
 
 def _describe(error: ValidationError) -> str:
