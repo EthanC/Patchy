@@ -121,7 +121,7 @@ class TestSteam:
         assert release.details == {
             "Depots": (
                 "Windows +120.4 MB, Counter-Strike 2 Mac Legacy added, "
-                "Windows/Linux (French), Windows (German) removed"
+                "Windows/Linux (French) changed, Windows (German) removed"
             )
         }
 

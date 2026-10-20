@@ -226,8 +226,9 @@ def describe_depots(previous: _State, current: _State) -> str | None:
         current: The depots of the new version.
 
     Returns:
-        One line such as ``Windows +120.4 MB, Linux added``, or ``None`` when no
-        depot changed.
+        One line such as ``Windows +120.4 MB, Linux added, Mac changed``, or
+        ``None`` when no depot changed. ``changed`` means the size is the same or
+        unknown.
     """
     changes: list[str] = []
 
@@ -235,10 +236,15 @@ def describe_depots(previous: _State, current: _State) -> str | None:
         if (old := previous.depots.get(depot_id)) is None:
             changes.append(f"{depot.name} added")
         elif old.gid != depot.gid:
-            changes.append(
-                f"{depot.name} {format_size(depot.size - old.size, signed=True)}"
+            growth: int = (
+                depot.size - old.size
                 if depot.size is not None and old.size is not None
-                else depot.name
+                else 0
+            )
+            changes.append(
+                f"{depot.name} {format_size(growth, signed=True)}"
+                if growth != 0
+                else f"{depot.name} changed"
             )
 
     changes.extend(
