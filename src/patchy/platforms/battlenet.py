@@ -128,7 +128,7 @@ class Battlenet(Platform[BattlenetSettings]):
         )
 
     @override
-    def enrich(self: Self, release: Release) -> Release:
+    def enrich(self: Self, release: Release, previous_state: str | None) -> Release:
         icon_url: str | None = None
         image_url: str | None = None
         build_name: str | None = None

@@ -46,9 +46,15 @@ def make_runner(
     return Runner(platforms, database, notifier_for=lambda _: notifier, dry_run=dry_run)
 
 
-def track(database: Database, version: str) -> None:
+def track(database: Database, version: str, state: str | None = None) -> None:
     database.save_title(
-        TitleRecord(platform="steam", instance="steam", title_id="730", version=version)
+        TitleRecord(
+            platform="steam",
+            instance="steam",
+            title_id="730",
+            version=version,
+            state=state,
+        )
     )
 
 
@@ -64,6 +70,36 @@ def test_first_sighting_is_tracked_without_notifying(
     assert stored.version == "20480931"
     assert stored.name == "Counter-Strike 2"
     assert notifier.sent == []
+
+
+def test_state_is_stored_and_compared_on_update(
+    steam: Platform[Any], database: Database
+) -> None:
+    runner = make_runner([steam], database, notifier := RecordingNotifier())
+    track(
+        database, "20480000", '{"depots": {"2347771": {"name": "Linux", "gid": "1"}}}'
+    )
+
+    assert runner.check(steam, "730") is Outcome.UPDATED
+
+    [update] = notifier.sent
+    assert update.release.details["Depots"].startswith("Windows added, Linux, ")
+    stored = database.get_title("steam", "steam", "730")
+    assert stored is not None
+    assert stored.state == update.release.state
+
+
+def test_unchanged_version_refreshes_state(
+    steam: Platform[Any], database: Database
+) -> None:
+    track(database, "20480931", "{}")
+
+    make_runner([steam], database, None).check(steam, "730")
+
+    stored = database.get_title("steam", "steam", "730")
+    assert stored is not None
+    assert stored.state is not None
+    assert "2347770" in stored.state
 
 
 def test_unchanged_version_is_not_reported(

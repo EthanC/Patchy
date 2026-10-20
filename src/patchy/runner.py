@@ -221,6 +221,7 @@ class Runner:
                     title_id=title_id,
                     name=release.name,
                     version=release.version,
+                    state=release.state,
                 )
             )
 
@@ -232,13 +233,15 @@ class Runner:
         if stored.version == release.version:
             logger.info(f"{label} is unchanged at version {release.version}")
 
+            stored.state = release.state
+
             self._save(stored)
 
             return Outcome.UNCHANGED
 
         update: Update = Update(
             platform=platform,
-            release=platform.enrich(release),
+            release=platform.enrich(release, stored.state),
             previous_version=stored.version,
         )
 
@@ -253,6 +256,7 @@ class Runner:
             notifier.send(update)
 
         stored.version = release.version
+        stored.state = release.state
         stored.last_updated = stored.last_checked
 
         self.database.record_update(

@@ -33,6 +33,8 @@ class TitleRecord(SQLModel, table=True):
     title_id: str = Field(primary_key=True)
     name: str | None = None
     version: str
+    state: str | None = None
+    """Platform-private data from ``Release.state``, saved on every check."""
     first_seen: datetime = Field(default_factory=utcnow)
     last_checked: datetime = Field(default_factory=utcnow)
     last_updated: datetime | None = None

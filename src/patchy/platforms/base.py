@@ -72,6 +72,14 @@ class Release:
     context: Mapping[str, str] = field(default_factory=dict, repr=False)
     """Platform-private values passed from ``fetch()`` to ``enrich()``. Never shown."""
 
+    state: str | None = field(default=None, repr=False)
+    """Platform-private data stored with the version, such as Steam depot manifests.
+
+    Saved on every check and handed back to ``enrich()`` as ``previous_state`` when
+    the version changes, so a platform can describe what changed between versions.
+    The format is up to the platform; serialize it with a Pydantic model.
+    """
+
     def with_details(self: Self, **details: str | None) -> Self:
         """Return a copy with extra details added, skipping ``None`` values."""
         merged: dict[str, str] = dict(self.details)
@@ -212,7 +220,11 @@ class Platform[S: PlatformSettings](ABC):
             PatchyError: The release could not be determined.
         """
 
-    def enrich(self: Self, release: Release) -> Release:
+    def enrich(
+        self: Self,
+        release: Release,
+        previous_state: str | None,  # noqa: ARG002 - for overrides.
+    ) -> Release:
         """Add notification-only information to a release that has changed.
 
         Called only when an update is detected, so it may make extra requests.
@@ -220,6 +232,7 @@ class Platform[S: PlatformSettings](ABC):
 
         Args:
             release: The release returned by ``fetch()``.
+            previous_state: The ``state`` stored with the previous version, if any.
 
         Returns:
             The release with any extra information added.

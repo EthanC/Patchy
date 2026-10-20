@@ -34,7 +34,7 @@ src/patchy/
   platforms/
     __init__.py    @register decorator and registry(), which auto-imports every module here.
     base.py        Platform ABC, Release, Update, UpstreamModel, OptionalText.
-    steam.py       Steam via api.steamcmd.net.
+    steam.py       Steam via api.steamcmd.net, including changed depots.
     battlenet.py   Battle.net via blizztrack.com.
     playstation.py Prospero (PS5) and Orbis (PS4) via prosperopatches.com / orbispatches.com.
 tests/
@@ -56,8 +56,8 @@ Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` 
 
 1. `build_platforms()` validates and instantiates each enabled instance. `Platform.__init__` normalizes title IDs with `normalize_title_id()`; invalid IDs are logged and dropped.
 2. `Runner.check()` calls `platform.fetch(title_id)`, which returns a `Release`.
-3. If the title is unknown, it is stored without notifying. If the version is unchanged, only `last_checked` is updated.
-4. If the version changed, `platform.enrich(release)` adds notification-only data (artwork, build names), the instance's notifier sends the message, and only then is the new version stored together with an `UpdateRecord`. A failed notification therefore retries on the next run.
+3. If the title is unknown, it is stored without notifying. If the version is unchanged, only `last_checked` and `state` are updated.
+4. If the version changed, `platform.enrich(release, previous_state)` adds notification-only data (artwork, build names, Steam's changed depots), the instance's notifier sends the message, and only then is the new version stored together with an `UpdateRecord`. A failed notification therefore retries on the next run.
 
 ## Error handling rules
 
@@ -74,6 +74,7 @@ Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` 
 3. If the platform needs options beyond `name`, `enabled`, `webhook_url`, and `titles`, subclass `PlatformSettings` and set `settings_model`. Options apply per instance.
 4. Subclass `Platform[YourSettings]`, set `key` (lowercase, used in `config.toml` and the database, so never change it once released), `name`, `color`, and `icon_url`, then decorate with `@register`.
 5. Implement `fetch()` with the minimum requests needed to read the version. Put extra requests for notifications in `enrich()`. Override `normalize_title_id()` to reject or canonicalize IDs.
+   To describe what changed between versions, set `Release.state` in `fetch()` to a JSON string from a private Pydantic model. Patchy stores it with the title and passes the previous one to `enrich()` as `previous_state`, which is `None` for titles stored before the platform set any; treat unreadable state as missing.
 6. Add fixtures under `tests/fixtures/` and tests in `tests/test_platforms.py` using `client.serve(url, fixture)`. Update `test_registry_discovers_every_platform`.
 7. Document the platform in `config.example.toml` and the README table.
 

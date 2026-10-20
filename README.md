@@ -46,6 +46,8 @@ branch = "beta"
 
 Each instance remembers versions separately, so a title watched by two instances is reported to both webhooks.
 
+Steam updates also list the depots that were added, removed, or changed since the previous version Patchy saw, with how much each changed depot grew or shrank.
+
 **Environment variables** hold runtime settings. Set them directly, or copy [`.env.example`](.env.example) to `.env`.
 
 | Variable                         | Description                                                  |

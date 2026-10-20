@@ -12,6 +12,73 @@
                 "icon": "8dbc71957312bbd3baea65848b545be9eae2a355"
             },
             "depots": {
+                "228988": {
+                    "config": {
+                        "oslist": "windows"
+                    },
+                    "depotfromapp": "228980",
+                    "sharedinstall": "1"
+                },
+                "2347770": {
+                    "config": {
+                        "oslist": "windows"
+                    },
+                    "manifests": {
+                        "public": {
+                            "gid": "7177320386262563384",
+                            "size": "39045203018",
+                            "download": "31544310592"
+                        },
+                        "beta": {
+                            "gid": "1234500000000000001",
+                            "size": "39100000000",
+                            "download": "31600000000"
+                        }
+                    }
+                },
+                "2347771": {
+                    "config": {
+                        "oslist": "linux"
+                    },
+                    "manifests": {
+                        "public": {
+                            "gid": "8834221556109875226",
+                            "size": "1503238553",
+                            "download": "960238553"
+                        }
+                    }
+                },
+                "2347772": {
+                    "name": "Counter-Strike 2 Mac Legacy",
+                    "manifests": {
+                        "public": "5550001112223334445"
+                    }
+                },
+                "2347779": {
+                    "config": {
+                        "oslist": "windows,linux",
+                        "language": "french"
+                    },
+                    "manifests": {
+                        "public": {
+                            "gid": "3141592653589793238",
+                            "size": "52428800",
+                            "download": "41943040"
+                        }
+                    }
+                },
+                "2347780": {
+                    "config": {
+                        "oslist": "windows"
+                    },
+                    "encryptedmanifests": {
+                        "beta": {
+                            "encrypted_gid_2": "ABCDEF"
+                        }
+                    }
+                },
+                "baselanguages": "english",
+                "workshopdepot": "0",
                 "branches": {
                     "public": {
                         "buildid": "20480931",
