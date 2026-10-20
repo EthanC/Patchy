@@ -21,7 +21,7 @@ def test_imports_renovate_history(database: Database) -> None:
     assert numeric is not None
     assert numeric.version == "19000000"
     assert database.get_title("battlenet", "wow") is not None
-    assert database.get_title("playstation5", "PPSA01284") is not None
+    assert database.get_title("prospero", "PPSA01284") is not None
 
 
 def test_rejects_unreadable_files(tmp_path: Path, database: Database) -> None:

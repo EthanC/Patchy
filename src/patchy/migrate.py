@@ -12,8 +12,8 @@ from patchy.errors import ConfigError
 RENOVATE_PLATFORMS: dict[str, str] = {
     "steam": "steam",
     "battle": "battlenet",
-    "prospero": "playstation5",
-    "orbis": "playstation4",
+    "prospero": "prospero",
+    "orbis": "orbis",
 }
 
 

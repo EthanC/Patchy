@@ -14,7 +14,7 @@ type MakePlatform = Callable[..., Platform[Any]]
 
 
 def test_registry_discovers_every_platform() -> None:
-    assert set(registry()) == {"steam", "battlenet", "playstation5", "playstation4"}
+    assert set(registry()) == {"steam", "battlenet", "prospero", "orbis"}
 
 
 class TestSteam:
@@ -143,7 +143,7 @@ class TestPlayStation:
             "prospero_PPSA01284.json",
         )
 
-        release = make_platform("playstation5").fetch("PPSA01284")
+        release = make_platform("prospero").fetch("PPSA01284")
 
         assert release.name == "Returnal"
         assert release.version == "01.004.002"
@@ -158,16 +158,16 @@ class TestPlayStation:
         )
 
         with pytest.raises(TitleNotFoundError):
-            make_platform("playstation4").fetch("CUSA00000")
+            make_platform("orbis").fetch("CUSA00000")
 
     def test_normalizes_ids(self, make_platform: MakePlatform) -> None:
         assert (
-            make_platform("playstation4").normalize_title_id(" cusa00419 ")
+            make_platform("orbis").normalize_title_id(" cusa00419 ")
             == "CUSA00419"
         )
 
         with pytest.raises(ConfigError):
-            make_platform("playstation4").normalize_title_id("12345")
+            make_platform("orbis").normalize_title_id("12345")
 
 
 def test_invalid_platform_settings_raise_config_error(
@@ -182,6 +182,6 @@ def test_titles_accept_comma_separated_strings(make_platform: MakePlatform) -> N
 
 
 def test_titles_are_normalized_and_deduplicated(make_platform: MakePlatform) -> None:
-    platform = make_platform("playstation5", titles=["ppsa01284", "PPSA01284", "bad"])
+    platform = make_platform("prospero", titles=["ppsa01284", "PPSA01284", "bad"])
 
     assert platform.titles == ["PPSA01284"]

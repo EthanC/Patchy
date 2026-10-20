@@ -151,7 +151,7 @@ class TestBuildPlatforms:
             {
                 "steam": {"titles": ["730"]},
                 "battlenet": {"titles": ["wow"], "enabled": False},
-                "playstation5": {},
+                "prospero": {},
             },
             client,
         )

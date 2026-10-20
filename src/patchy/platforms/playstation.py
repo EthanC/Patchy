@@ -69,10 +69,10 @@ class PlayStation(Platform[PlatformSettings]):
 
 
 @register
-class PlayStation5(PlayStation):
+class Prospero(PlayStation):
     """PlayStation 5 titles, via ProsperoPatches."""
 
-    key: ClassVar[str] = "playstation5"
+    key: ClassVar[str] = "prospero"
     name: ClassVar[str] = "PlayStation 5"
     color: ClassVar[int] = 0x00439C
     icon_url: ClassVar[str | None] = "https://i.imgur.com/ccNqLcb.png"
@@ -80,10 +80,10 @@ class PlayStation5(PlayStation):
 
 
 @register
-class PlayStation4(PlayStation):
+class Orbis(PlayStation):
     """PlayStation 4 titles, via OrbisPatches."""
 
-    key: ClassVar[str] = "playstation4"
+    key: ClassVar[str] = "orbis"
     name: ClassVar[str] = "PlayStation 4"
     color: ClassVar[int] = 0x00439C
     icon_url: ClassVar[str | None] = "https://i.imgur.com/ccNqLcb.png"
