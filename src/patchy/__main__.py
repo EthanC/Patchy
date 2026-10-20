@@ -1,7 +1,6 @@
 """Command-line entry point: ``patchy`` or ``python -m patchy``."""
 
 import argparse
-import os
 import signal
 import sys
 import threading
@@ -14,9 +13,9 @@ lazy from types import FrameType
 from loguru import logger
 
 from patchy.client import HttpClient
-from patchy.config import DEFAULT_CONFIG_PATH, LogSettings, Settings
+from patchy.config import EnvironmentSettings, FileSettings, LogSettings
 from patchy.database import Database
-from patchy.errors import PatchyError
+from patchy.errors import ConfigError, PatchyError
 from patchy.logs import configure_logging
 from patchy.migrate import import_renovate_history
 from patchy.notifier import DiscordNotifier, Notifier
@@ -42,7 +41,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "-c",
         "--config",
         type=Path,
-        default=Path(os.environ.get("PATCHY_CONFIG", DEFAULT_CONFIG_PATH)),
+        default=None,
         help="path to config.toml (default: $PATCHY_CONFIG or ./config.toml)",
     )
 
@@ -83,26 +82,31 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     try:
-        settings: Settings = Settings.load(args.config)
+        environment: EnvironmentSettings = EnvironmentSettings.load()
     except PatchyError as e:
         configure_logging(LogSettings())
         logger.critical(str(e))
 
         return EXIT_FAILURE
 
-    configure_logging(settings.log)
+    configure_logging(environment.log)
 
     try:
         match args.command:
             case "import-history":
-                with _open_database(settings) as database:
+                with _open_database(environment) as database:
                     import_renovate_history(args.path, database)
             case _:
                 _run(
-                    settings,
+                    environment,
+                    FileSettings.load(args.config or environment.config),
                     once=args.once,
-                    dry_run=args.dry_run or settings.dry_run,
+                    dry_run=args.dry_run or environment.dry_run,
                 )
+    except ConfigError as e:
+        logger.critical(str(e))
+
+        return EXIT_FAILURE
     except PatchyError as e:
         logger.opt(exception=e).critical(str(e))
 
@@ -114,9 +118,9 @@ def main(argv: list[str] | None = None) -> int:
 
 
 @contextmanager
-def _open_database(settings: Settings) -> Generator[Database]:
+def _open_database(environment: EnvironmentSettings) -> Generator[Database]:
     """Open the database for the duration of a ``with`` block."""
-    database: Database = Database(settings.database.path)
+    database: Database = Database(environment.database.path)
 
     try:
         yield database
@@ -124,7 +128,13 @@ def _open_database(settings: Settings) -> Generator[Database]:
         database.close()
 
 
-def _run(settings: Settings, *, once: bool, dry_run: bool) -> None:
+def _run(
+    environment: EnvironmentSettings,
+    settings: FileSettings,
+    *,
+    once: bool,
+    dry_run: bool,
+) -> None:
     """Check titles once, or repeatedly when an interval is configured."""
     logger.info("Patchy")
     logger.info("https://github.com/EthanC/Patchy")
@@ -146,9 +156,9 @@ def _run(settings: Settings, *, once: bool, dry_run: bool) -> None:
 
     with (
         HttpClient(
-            timeout=settings.http.timeout, retries=settings.http.retries
+            timeout=environment.http.timeout, retries=environment.http.retries
         ) as client,
-        _open_database(settings) as database,
+        _open_database(environment) as database,
     ):
         platforms: list[Platform[Any]] = build_platforms(settings.platforms, client)
 

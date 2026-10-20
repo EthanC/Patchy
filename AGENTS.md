@@ -24,7 +24,7 @@ uv run patchy --help       # run the CLI
 ```
 src/patchy/
   __main__.py      CLI (argparse): run, import-history, platforms. Signal handling and the interval loop.
-  config.py        Settings: config.toml + PATCHY_* env vars via pydantic-settings. [platforms.*] is TOML-only. PlatformSettings base.
+  config.py        EnvironmentSettings (PATCHY_* env vars) and FileSettings (config.toml); no setting is in both. PlatformSettings base.
   client.py        HttpClient: niquests session with retries; raises FetchError / PayloadError only.
   database.py      SQLModel tables (TitleRecord, UpdateRecord) and the Database wrapper.
   errors.py        PatchyError hierarchy. Every expected failure is one of these.
@@ -86,7 +86,8 @@ class Example(Platform[PlatformSettings]):
 ## Adding other features
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
-- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README. Environment variables join the path with single underscores (`discord.webhook_url` is `PATCHY_DISCORD_WEBHOOK_URL`); only the first underscore after a section name splits, so settings nest at most one level deep and top-level fields must not start with a section name followed by `_`. Add new variables to `test_every_option_has_a_single_underscore_variable`. Platform settings (titles included) are read from `config.toml` only. `_KnownEnvironment` silently ignores `PATCHY_*` variables for platforms and for options that don't exist, so removing an option never breaks existing deployments; unknown keys in `config.toml` are still errors.
+- Every setting lives in exactly one place. Runtime behaviour (dry run, logging, database path, HTTP, the config path) goes on `EnvironmentSettings`, documented in `.env.example` and the README's variable table. What to watch and where to report it (interval, notification webhook, platforms) goes on `FileSettings`, documented in `config.example.toml` and the README's option table. Never add a setting to both.
+- Environment variables join the path with single underscores (`log.level` is `PATCHY_LOG_LEVEL`); only the first underscore after a section name splits, so environment settings nest at most one level deep. Unknown `PATCHY_*` variables are ignored so removing an option never breaks a deployment. `FileSettings.load()` rejects unknown keys and reports environment settings found in `config.toml` with the variable to use instead. Cover new variables in `TestEnvironment.test_every_variable`.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.
 

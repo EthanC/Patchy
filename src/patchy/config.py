@@ -1,17 +1,19 @@
-"""Load Patchy's settings from ``config.toml`` and environment variables.
+"""Load Patchy's settings, each from exactly one place.
 
-Precedence, highest first: environment variables, a ``.env`` file, ``config.toml``,
-then defaults. Environment variables use the ``PATCHY_`` prefix and ``_`` between
-nested keys, for example ``PATCHY_DISCORD_WEBHOOK_URL``.
+Runtime settings come from ``PATCHY_*`` environment variables (or a ``.env`` file):
+dry run, logging, the database path, HTTP behaviour, and the ``config.toml`` path.
 
-Titles and other platform settings are the exception: they are read from
-``config.toml`` only. Environment variables for them, or for options that do not
-exist, are ignored.
+What to watch and where to report it comes from ``config.toml``: the interval, the
+notification webhook, and every platform's titles and options.
+
+A setting is never read from both. Environment variables for ``config.toml``
+settings, or for options that do not exist, are ignored; environment settings
+placed in ``config.toml`` are a configuration error.
 """
 
 import tomllib
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal, Self, override
+from typing import Annotated, Any, ClassVar, Literal, Self
 
 from pydantic import (
     BaseModel,
@@ -21,12 +23,7 @@ from pydantic import (
     ValidationError,
     field_validator,
 )
-from pydantic_settings import (
-    BaseSettings,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
-lazy from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from patchy.errors import ConfigError
 
@@ -40,7 +37,7 @@ type LogLevel = Literal[
 class LogSettings(BaseModel):
     """Console logging and log forwarding to Discord."""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
     level: LogLevel = "INFO"
     discord_webhook_url: HttpUrl | None = None
@@ -66,7 +63,7 @@ class DiscordSettings(BaseModel):
 class DatabaseSettings(BaseModel):
     """SQLite persistence."""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
     path: Path = Path("patchy.db")
 
@@ -74,7 +71,7 @@ class DatabaseSettings(BaseModel):
 class HttpSettings(BaseModel):
     """Behaviour of requests made to upstream services."""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
     timeout: Annotated[float, Field(gt=0)] = 30.0
     retries: Annotated[int, Field(ge=0)] = 3
@@ -97,33 +94,59 @@ class PlatformSettings(BaseModel):
         return list(dict.fromkeys(value))
 
 
-class Settings(BaseSettings):
-    """The complete Patchy configuration."""
+class EnvironmentSettings(BaseSettings):
+    """Runtime settings, read only from ``PATCHY_*`` environment variables.
+
+    Variable names join the setting's path with underscores, so ``log.level`` is
+    ``PATCHY_LOG_LEVEL``. Unknown variables are ignored.
+    """
 
     model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_prefix="PATCHY_",
         env_nested_delimiter="_",
         env_nested_max_split=1,
         env_file=".env",
-        extra="forbid",
+        extra="ignore",
     )
 
-    interval: Annotated[int, Field(ge=0)] = 0
-    """Minutes between checks. ``0`` checks once and exits."""
+    config: Path = DEFAULT_CONFIG_PATH
+    """Location of ``config.toml``."""
 
     dry_run: bool = False
     """Check titles without saving versions or sending notifications."""
 
     log: LogSettings = Field(default_factory=LogSettings)
-    discord: DiscordSettings = Field(default_factory=DiscordSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     http: HttpSettings = Field(default_factory=HttpSettings)
 
-    platforms: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    """Raw settings per platform key, validated by each platform's own model.
+    @classmethod
+    def load(cls) -> Self:
+        """Read settings from the environment and ``.env``.
 
-    Read from ``config.toml`` only.
-    """
+        Returns:
+            The validated settings.
+
+        Raises:
+            ConfigError: An environment variable has an invalid value.
+        """
+        try:
+            return cls()
+        except ValidationError as e:
+            raise ConfigError(_describe(e, prefix="PATCHY_")) from e
+
+
+class FileSettings(BaseModel):
+    """What to watch and where to report it, read only from ``config.toml``."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    interval: Annotated[int, Field(ge=0)] = 0
+    """Minutes between checks. ``0`` checks once and exits."""
+
+    discord: DiscordSettings = Field(default_factory=DiscordSettings)
+
+    platforms: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    """Raw settings per platform key, validated by each platform's own model."""
 
     @field_validator("platforms", mode="before")
     @classmethod
@@ -134,40 +157,17 @@ class Settings(BaseSettings):
         return value
 
     @classmethod
-    @override
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """Rank environment variables above values passed in from ``config.toml``.
-
-        ``load()`` passes the TOML document as initialization arguments, so those are
-        placed beneath the environment rather than above it. Environment sources
-        cannot set platforms, and ignore variables for options that do not exist.
-        """
-        return (
-            _KnownEnvironment(env_settings, toml_only={"platforms"}),
-            _KnownEnvironment(dotenv_settings, toml_only={"platforms"}),
-            init_settings,
-            file_secret_settings,
-        )
-
-    @classmethod
-    def load(cls, path: Path = DEFAULT_CONFIG_PATH) -> Self:
-        """Load settings, reading TOML from ``path`` when it exists.
+    def load(cls, path: Path) -> Self:
+        """Read settings from a TOML file. A missing file yields the defaults.
 
         Args:
-            path: Location of the TOML configuration file.
+            path: Location of ``config.toml``.
 
         Returns:
             The validated settings.
 
         Raises:
-            ConfigError: The TOML file or a value in it is invalid.
+            ConfigError: The file is unreadable or contains invalid settings.
         """
         document: dict[str, Any] = {}
 
@@ -179,71 +179,56 @@ class Settings(BaseSettings):
 
                 raise ConfigError(msg) from e
 
-        try:
-            return cls(**document)
-        except ValidationError as e:
-            raise ConfigError(_describe(e)) from e
-
-
-class _KnownEnvironment(PydanticBaseSettingsSource):
-    """Wrap an environment source so it only supplies known, non-TOML-only settings.
-
-    ``PATCHY_*`` variables for removed or unknown options, and for TOML-only fields,
-    are ignored rather than rejected, so stale variables never stop Patchy.
-    """
-
-    def __init__(
-        self: Self, source: PydanticBaseSettingsSource, *, toml_only: set[str]
-    ) -> None:
-        super().__init__(source.settings_cls)
-
-        self._source: PydanticBaseSettingsSource = source
-        self._toml_only: set[str] = toml_only
-
-    @override
-    def get_field_value(
-        self: Self, field: FieldInfo, field_name: str
-    ) -> tuple[Any, str, bool]:
-        return self._source.get_field_value(field, field_name)
-
-    @override
-    def __call__(self: Self) -> dict[str, Any]:
-        values: dict[str, Any] = {
-            key: value
-            for key, value in self._source().items()
-            if key not in self._toml_only
+        problems: list[str] = [
+            f"{key}: set with {_variable(key)}, not in config.toml"
+            for key in document
+            if key in EnvironmentSettings.model_fields
+        ]
+        document = {
+            k: v
+            for k, v in document.items()
+            if k not in EnvironmentSettings.model_fields
         }
 
-        return _known(values, self.settings_cls)
-
-
-def _known(values: dict[str, Any], model: type[BaseModel]) -> dict[str, Any]:
-    """Drop keys that ``model`` (or a nested model) does not define."""
-    known: dict[str, Any] = {}
-
-    for key, value in values.items():
-        if (field := model.model_fields.get(key)) is None:
-            continue
-
-        annotation: object = field.annotation
-
-        if (
-            isinstance(value, dict)
-            and isinstance(annotation, type)
-            and issubclass(annotation, BaseModel)
-        ):
-            known[key] = _known(value, annotation)
+        try:
+            settings: Self = cls.model_validate(document)
+        except ValidationError as e:
+            problems.extend(_problems(e))
         else:
-            known[key] = value
+            if not problems:
+                return settings
 
-    return known
+        msg = f"Invalid configuration in {path}:\n  " + "\n  ".join(problems)
+
+        raise ConfigError(msg)
 
 
-def _describe(error: ValidationError) -> str:
+def _variable(field_name: str) -> str:
+    """Name the environment variable (or variables) for an environment setting."""
+    annotation: object = EnvironmentSettings.model_fields[field_name].annotation
+    name: str = f"PATCHY_{field_name.upper()}"
+
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return f"{name}_* environment variables"
+
+    return f"the {name} environment variable"
+
+
+def _problems(error: ValidationError, prefix: str = "") -> list[str]:
+    """Describe each validation failure on one line."""
+    lines: list[str] = []
+
+    for item in error.errors():
+        path: list[str] = [str(part) for part in item["loc"]]
+        name: str = (
+            prefix + "_".join(path).upper() if prefix else ".".join(path) or "(root)"
+        )
+
+        lines.append(f"{name}: {item['msg']}")
+
+    return lines
+
+
+def _describe(error: ValidationError, prefix: str = "") -> str:
     """Summarize a validation error as one line per invalid setting."""
-    lines: list[str] = [
-        f"{'.'.join(str(part) for part in item['loc']) or '(root)'}: {item['msg']}"
-        for item in error.errors()
-    ]
-
-    return "Invalid configuration:\n  " + "\n  ".join(lines)
+    return "Invalid configuration:\n  " + "\n  ".join(_problems(error, prefix))

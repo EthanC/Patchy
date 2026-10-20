@@ -1,38 +1,15 @@
 # Patchy configuration. Copy this file to config.toml and edit it.
 #
-# Values outside [platforms.*] can also be set with an environment variable named
-# PATCHY_ followed by the key path in uppercase, joined with underscores, e.g.:
-#
-#   PATCHY_INTERVAL=30
-#   PATCHY_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-#
-# Environment variables take precedence over this file. Titles and other platform
-# settings can only be set here.
+# This file holds what Patchy watches and where it reports. Runtime settings
+# (dry run, logging, database path, HTTP behaviour) are set with PATCHY_*
+# environment variables instead; see .env.example. No setting is read from both.
 
 # Minutes between checks. 0 checks once and exits, for use with cron.
 interval = 0
 
-# Check titles without saving versions or sending notifications.
-dry_run = false
-
-[log]
-# TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, or CRITICAL.
-level = "INFO"
-# Optionally forward logs at or above discord_level to a Discord webhook.
-# discord_webhook_url = "https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY"
-discord_level = "WARNING"
-
 [discord]
 # Where update notifications are posted.
 webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
-
-[database]
-path = "patchy.db"
-
-[http]
-# Seconds to wait for upstream services, and retries for transient failures.
-timeout = 30
-retries = 3
 
 # Every platform accepts `enabled` (default true) and `titles` (a list of IDs).
 # Run `patchy platforms` to list every available platform.

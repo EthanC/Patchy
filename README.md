@@ -10,26 +10,35 @@ Patchy is the successor to Renovate. It checks each configured title's current v
 
 A [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks) is required to receive update notifications.
 
-Patchy is configured with a `config.toml` file. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it; every option is documented there.
+Patchy reads each setting from exactly one place.
 
-The titles to watch, and every other `[platforms.*]` setting, live in `config.toml` only. Any other option can also be set with an environment variable named `PATCHY_` followed by the option's path in uppercase, joined with underscores (`discord.webhook_url` is `PATCHY_DISCORD_WEBHOOK_URL`), which takes precedence over `config.toml`.
+**`config.toml`** holds what to watch and where to report it. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it.
 
-| Option                   | Environment Variable                   | Description                                                     |
-| ------------------------ | -------------------------------------- | --------------------------------------------------------------- |
-| `interval`               | `PATCHY_INTERVAL`                      | Minutes between checks. `0` (default) checks once and exits.    |
-| `dry_run`                | `PATCHY_DRY_RUN`                       | Check titles without saving versions or sending notifications. |
-| `log.level`              | `PATCHY_LOG_LEVEL`                    | Console [log level](https://loguru.readthedocs.io/en/stable/api/logger.html). Default `INFO`. |
-| `log.discord_webhook_url`| `PATCHY_LOG_DISCORD_WEBHOOK_URL`      | Discord Webhook URL to forward log events to.                   |
-| `log.discord_level`      | `PATCHY_LOG_DISCORD_LEVEL`            | Minimum level forwarded to Discord. Default `WARNING`.          |
-| `discord.webhook_url`    | `PATCHY_DISCORD_WEBHOOK_URL`          | Discord Webhook URL to post update notifications to.            |
-| `database.path`          | `PATCHY_DATABASE_PATH`                | SQLite database location. Default `patchy.db`.                  |
-| `http.timeout`           | `PATCHY_HTTP_TIMEOUT`                 | Seconds to wait for upstream services. Default `30`.            |
-| `http.retries`           | `PATCHY_HTTP_RETRIES`                 | Retries for transient upstream failures. Default `3`.           |
-| (none)                   | `PATCHY_CONFIG`                       | Path to `config.toml`. Default `./config.toml`.                 |
-| `platforms.steam.titles` | `config.toml` only                     | Steam app IDs to watch.                                         |
-| `platforms.battlenet.titles` | `config.toml` only                 | Battle.net (BlizzTrack) product codes to watch.                 |
-| `platforms.prospero.titles` | `config.toml` only                  | PlayStation 5 title IDs to watch.                               |
-| `platforms.orbis.titles` | `config.toml` only                     | PlayStation 4 title IDs to watch.                               |
+| Option                       | Description                                                  |
+| ---------------------------- | ------------------------------------------------------------ |
+| `interval`                   | Minutes between checks. `0` (default) checks once and exits. |
+| `discord.webhook_url`        | Discord Webhook URL to post update notifications to.         |
+| `platforms.<key>.enabled`    | Whether to check the platform. Default `true`.               |
+| `platforms.<key>.titles`     | Title IDs to watch on the platform.                          |
+| `platforms.steam.branch`     | Steam depot branch to track. Default `public`.               |
+| `platforms.battlenet.region` | Battle.net region to track. Default `Americas`.              |
+
+Platform keys are `steam` (Steam app IDs), `battlenet` (BlizzTrack product codes), `prospero` (PlayStation 5 title IDs), and `orbis` (PlayStation 4 title IDs).
+
+**Environment variables** hold runtime settings. Set them directly, or copy [`.env.example`](.env.example) to `.env`.
+
+| Variable                         | Description                                                  |
+| -------------------------------- | ------------------------------------------------------------ |
+| `PATCHY_CONFIG`                  | Path to `config.toml`. Default `config.toml`.                |
+| `PATCHY_DRY_RUN`                 | Check titles without saving versions or sending notifications. Default `false`. |
+| `PATCHY_LOG_LEVEL`               | Console [log level](https://loguru.readthedocs.io/en/stable/api/logger.html). Default `INFO`. |
+| `PATCHY_LOG_DISCORD_WEBHOOK_URL` | Discord Webhook URL to forward log events to.                |
+| `PATCHY_LOG_DISCORD_LEVEL`       | Minimum level forwarded to Discord. Default `WARNING`.       |
+| `PATCHY_DATABASE_PATH`           | SQLite database location. Default `patchy.db`.               |
+| `PATCHY_HTTP_TIMEOUT`            | Seconds to wait for upstream services. Default `30`.         |
+| `PATCHY_HTTP_RETRIES`            | Retries for transient upstream failures. Default `3`.        |
+
+Runtime settings placed in `config.toml` are reported as an error. Environment variables for `config.toml` settings, or for options that don't exist, are ignored.
 
 The first time Patchy sees a title it records the current version without notifying. Later checks notify only when the version changes. A notification that fails to send is retried on the next check.
 
@@ -49,20 +58,19 @@ services:
       PUID: 1000
       PGID: 1000
       TZ: America/New_York
-      PATCHY_INTERVAL: 30
-      PATCHY_DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
+      PATCHY_LOG_LEVEL: INFO
     volumes:
       - ./data:/data
 ```
 
-To use cron or another scheduler instead, leave `PATCHY_INTERVAL` unset and run the container on your schedule without `restart`.
+Set `interval` in `config.toml` to have Patchy check on its own. To use cron or another scheduler instead, leave `interval` at `0` and run the container on your schedule without `restart`.
 
 ### Standalone
 
 Patchy requires [Python 3.15](https://www.python.org/) and [uv](https://github.com/astral-sh/uv).
 
 1. Install dependencies: `uv sync --no-dev`
-2. Copy `config.example.toml` to `config.toml`, then fill it in.
+2. Copy `config.example.toml` to `config.toml` and fill it in. Optionally copy `.env.example` to `.env` to change runtime settings.
 3. Start Patchy: `uv run patchy`
 
 Run `uv run patchy --help` for every command and option.
