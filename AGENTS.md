@@ -71,7 +71,7 @@ Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` 
 ## Adding a platform
 
 1. Create `src/patchy/platforms/<name>.py`. No other file needs to change for the platform to be discovered.
-2. Describe each upstream response with `UpstreamModel` subclasses (prefixed `_`, private to the module). Use `OptionalText` for optional strings that upstream may send as `""`. Fetch with `self.client.get_model(url, Model)`, which validates the response and raises `PayloadError` on mismatch.
+2. Describe each upstream response with `UpstreamModel` subclasses (prefixed `_`, private to the module). Use `OptionalText` for optional strings that upstream may send as `""` or `false`. Fetch with `self.client.get_model(url, Model)`, which validates the response and raises `PayloadError` on mismatch.
 3. If the platform needs options beyond `name`, `enabled`, `webhook_url`, and `titles`, subclass `PlatformSettings` and set `settings_model`. Options apply per instance.
 4. Subclass `Platform[YourSettings]`, set `key` (lowercase, used in `config.toml` and the database, so never change it once released), `name`, `source` (the site `Release.url` links to, shown as "View on <source>"), `color`, and `icon_url`, then decorate with `@register`. Details are a single string (shown as code) or a tuple of entries (shown as a bulleted list). Set `proxy_media = True` if the host serves images Discord may not render (for example without a `Content-Type`), so they go through wsrv.nl.
 5. Implement `fetch()` with the minimum requests needed to read the version. Put extra requests for notifications in `enrich()`. Override `normalize_title_id()` to reject or canonicalize IDs, and `display_title_id()` to change how notifications show them.

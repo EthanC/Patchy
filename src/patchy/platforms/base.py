@@ -15,8 +15,8 @@ lazy from patchy.client import HttpClient
 
 
 def _blank_to_none(value: object) -> object:
-    """Treat empty or whitespace-only strings from upstream services as missing."""
-    if isinstance(value, str) and not value.strip():
+    """Treat ``false`` and empty or whitespace-only strings from upstream as missing."""
+    if value is False or (isinstance(value, str) and not value.strip()):
         return None
 
     return value
@@ -26,7 +26,7 @@ type Detail = str | tuple[str, ...]
 """A notification detail: a single value, shown as code, or a list of entries."""
 
 type OptionalText = Annotated[str | None, BeforeValidator(_blank_to_none)]
-"""An optional string field in an upstream response where ``""`` means missing."""
+"""An optional upstream string where ``""`` or ``false`` means missing."""
 
 
 class UpstreamModel(BaseModel):

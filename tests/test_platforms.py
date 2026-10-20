@@ -365,7 +365,7 @@ class TestPlayStation:
     ) -> None:
         client.responses["https://orbispatches.com/api/lookup?titleid=CUSA00419"] = (
             '{"success": true, "metadata": {"name": "Grand Theft Auto V", '
-            '"currentVersion": "01.57", "icon": "", "background": ""}}'
+            '"currentVersion": "01.57", "icon": "", "background": false}}'
         )
 
         release = make_platform("orbis").fetch("CUSA00419")
