@@ -86,7 +86,7 @@ class Example(Platform[PlatformSettings]):
 ## Adding other features
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
-- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README. Platform settings (titles included) are read from `config.toml` only; `_TomlOnly` rejects them from environment variables, so don't document env equivalents for them.
+- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README. Platform settings (titles included) are read from `config.toml` only. `_KnownEnvironment` silently ignores `PATCHY_*` variables for platforms and for options that don't exist, so removing an option never breaks existing deployments; unknown keys in `config.toml` are still errors.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.
 

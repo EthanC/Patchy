@@ -5,7 +5,8 @@ then defaults. Environment variables use the ``PATCHY_`` prefix and ``__`` betwe
 nested keys, for example ``PATCHY_DISCORD__WEBHOOK_URL``.
 
 Titles and other platform settings are the exception: they are read from
-``config.toml`` only, and setting them in the environment is a configuration error.
+``config.toml`` only. Environment variables for them, or for options that do not
+exist, are ignored.
 """
 
 import tomllib
@@ -144,12 +145,12 @@ class Settings(BaseSettings):
         """Rank environment variables above values passed in from ``config.toml``.
 
         ``load()`` passes the TOML document as initialization arguments, so those are
-        placed beneath the environment rather than above it. Environment sources are
-        barred from setting platforms.
+        placed beneath the environment rather than above it. Environment sources
+        cannot set platforms, and ignore variables for options that do not exist.
         """
         return (
-            _TomlOnly(env_settings, "platforms"),
-            _TomlOnly(dotenv_settings, "platforms"),
+            _KnownEnvironment(env_settings, toml_only={"platforms"}),
+            _KnownEnvironment(dotenv_settings, toml_only={"platforms"}),
             init_settings,
             file_secret_settings,
         )
@@ -183,16 +184,20 @@ class Settings(BaseSettings):
             raise ConfigError(_describe(e)) from e
 
 
-class _TomlOnly(PydanticBaseSettingsSource):
-    """Wrap an environment source so it cannot set a field reserved for TOML."""
+class _KnownEnvironment(PydanticBaseSettingsSource):
+    """Wrap an environment source so it only supplies known, non-TOML-only settings.
+
+    ``PATCHY_*`` variables for removed or unknown options, and for TOML-only fields,
+    are ignored rather than rejected, so stale variables never stop Patchy.
+    """
 
     def __init__(
-        self: Self, source: PydanticBaseSettingsSource, field_name: str
+        self: Self, source: PydanticBaseSettingsSource, *, toml_only: set[str]
     ) -> None:
         super().__init__(source.settings_cls)
 
         self._source: PydanticBaseSettingsSource = source
-        self._field_name: str = field_name
+        self._toml_only: set[str] = toml_only
 
     @override
     def get_field_value(
@@ -202,17 +207,35 @@ class _TomlOnly(PydanticBaseSettingsSource):
 
     @override
     def __call__(self: Self) -> dict[str, Any]:
-        values: dict[str, Any] = self._source()
+        values: dict[str, Any] = {
+            key: value
+            for key, value in self._source().items()
+            if key not in self._toml_only
+        }
 
-        if self._field_name in values:
-            msg: str = (
-                f"{self._field_name} must be configured in config.toml, not with "
-                f"PATCHY_{self._field_name.upper()}__* environment variables"
-            )
+        return _known(values, self.settings_cls)
 
-            raise ConfigError(msg)
 
-        return values
+def _known(values: dict[str, Any], model: type[BaseModel]) -> dict[str, Any]:
+    """Drop keys that ``model`` (or a nested model) does not define."""
+    known: dict[str, Any] = {}
+
+    for key, value in values.items():
+        if (field := model.model_fields.get(key)) is None:
+            continue
+
+        annotation: object = field.annotation
+
+        if (
+            isinstance(value, dict)
+            and isinstance(annotation, type)
+            and issubclass(annotation, BaseModel)
+        ):
+            known[key] = _known(value, annotation)
+        else:
+            known[key] = value
+
+    return known
 
 
 def _describe(error: ValidationError) -> str:

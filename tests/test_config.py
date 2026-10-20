@@ -58,16 +58,34 @@ def test_environment_overrides_toml(
 
 
 @pytest.mark.parametrize("source", ["env", "dotenv"])
-def test_platforms_cannot_come_from_the_environment(
+def test_removed_and_toml_only_variables_are_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: str
 ) -> None:
-    if source == "env":
-        monkeypatch.setenv("PATCHY_PLATFORMS__STEAM__TITLES", "440")
-    else:
-        (tmp_path / ".env").write_text("PATCHY_PLATFORMS__STEAM__TITLES=440\n")
+    variables: dict[str, str] = {
+        "PATCHY_PLATFORMS__STEAM__TITLES": "440",
+        "PATCHY_DISCORD__USERNAME": "Renovate",
+        "PATCHY_DISCORD__AVATAR_URL": "https://example.com/avatar.png",
+        "PATCHY_NOT_AN_OPTION": "1",
+        "PATCHY_LOG__LEVEL": "debug",
+    }
 
-    with pytest.raises(ConfigError, match=r"must be configured in config\.toml"):
-        Settings.load(write(tmp_path, '[platforms.steam]\ntitles = ["730"]\n'))
+    if source == "env":
+        for key, value in variables.items():
+            monkeypatch.setenv(key, value)
+    else:
+        (tmp_path / ".env").write_text(
+            "".join(f"{key}={value}\n" for key, value in variables.items())
+        )
+
+    settings = Settings.load(write(tmp_path, '[platforms.steam]\ntitles = ["730"]\n'))
+
+    assert settings.platforms == {"steam": {"titles": ["730"]}}
+    assert settings.log.level == "DEBUG"
+
+
+def test_unknown_keys_in_toml_are_still_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match=r"discord\.username"):
+        Settings.load(write(tmp_path, '[discord]\nusername = "Patchy"\n'))
 
 
 def test_invalid_values_are_reported_together(tmp_path: Path) -> None:
