@@ -34,25 +34,29 @@ path = "patchy.db"
 timeout = 30
 retries = 3
 
-# Each platform accepts `titles` (a list of IDs) and `enabled` (default true).
+# Every platform accepts `enabled` (default true) and `titles` (a list of IDs).
 # Run `patchy platforms` to list every available platform.
 
 [platforms.steam]
+enabled = true
 # Steam app IDs, from store.steampowered.com/app/<id> or steamdb.info.
 titles = ["730"]
 # Depot branch whose build ID is tracked.
 branch = "public"
 
 [platforms.battlenet]
+enabled = true
 # BlizzTrack product codes, from blizztrack.com.
 titles = ["wow"]
 # Region whose version is tracked. Falls back to the first region listed.
 region = "Americas"
 
 [platforms.prospero]
+enabled = true
 # PlayStation 5 title IDs, from prosperopatches.com.
 titles = ["PPSA01284"]
 
 [platforms.orbis]
+enabled = true
 # PlayStation 4 title IDs, from orbispatches.com.
 titles = ["CUSA00419"]
