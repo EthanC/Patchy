@@ -113,6 +113,15 @@ class Example(Platform[PlatformSettings]):
 - Tests never touch the network. Use `FakeClient` and fixtures.
 - Keep `uv.lock` in sync (`uv lock`) whenever dependencies change.
 
+## Commits
+
+Write commit messages in [Conventional Commits](https://www.conventionalcommits.org/) style: `<type>[(scope)][!]: <description>`.
+
+- Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`, `style`, `revert`.
+- Scope is optional: a platform key (`steam`, `battlenet`, `playstation`) or module (`config`, `notifier`, `runner`, `database`) when the change is confined to one.
+- Mark changes that break existing configuration, environment variables, or stored data with `!`, and explain the migration in the body.
+- The description is imperative and lowercase, with no trailing period. The body explains why.
+
 ## Docker and CI
 
 - `Dockerfile` builds a uv virtual environment on `python:3.15-alpine` and copies it into a clean Alpine image. All dependencies have musllinux wheels, so no compiler is needed; check this before adding a compiled dependency.
