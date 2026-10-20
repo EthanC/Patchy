@@ -1,0 +1,9 @@
+{
+    "success": true,
+    "result": {
+        "data": [
+            {"name": "Europe", "path": "tpr/wow", "hosts": "eu.cdn.blizzard.com level3.blizzard.com"},
+            {"name": "Americas", "path": "tpr/wow", "hosts": "us.cdn.blizzard.com level3.blizzard.com"}
+        ]
+    }
+}

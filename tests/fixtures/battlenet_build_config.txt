@@ -1,0 +1,5 @@
+# Build Configuration
+
+root = 0123456789abcdef0123456789abcdef
+build-name = WOW-63904patch11.2.5_Retail
+build-uid = wow

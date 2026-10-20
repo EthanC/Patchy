@@ -1,0 +1,12 @@
+{
+    "success": true,
+    "result": {
+        "tact": "wow",
+        "name": "World of Warcraft",
+        "created_at": "2026-10-14T18:22:05.000Z",
+        "data": [
+            {"name": "Europe", "version_name": "11.2.5.63906", "build_config": "aabbccddeeff00112233445566778899", "build_id": 63906},
+            {"name": "Americas", "version_name": "11.2.5.63904", "build_config": "c3b2f9e8d7a6b5c4d3e2f1a0b9c8d7e6", "build_id": 63904}
+        ]
+    }
+}

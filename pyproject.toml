@@ -1,25 +1,70 @@
 [project]
-name = "renovate"
-version = "1.1.0"
-description = "Monitor games on Steam, Battle.net, and PlayStation and notify about updates."
+name = "patchy"
+version = "1.0.0"
+description = "Monitor games on Steam, Battle.net, and PlayStation and notify about updates via Discord."
 readme = "README.md"
-requires-python = ">=3.12"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [{ name = "EthanC" }]
+requires-python = ">=3.15"
 dependencies = [
-    "python-dotenv>=1.0.1",
-    "loguru>=0.7.2",
-    "loguru-discord>=1.4.0",
-    "httpx>=0.27.0",
-    "discord-webhook>=1.3.1",
+    "discord-clyde>=1.2.0",
+    "loguru>=0.7.3",
+    "loguru-discord>=2.2.0",
+    "niquests>=3.21.2",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.0",
+    "sqlalchemy>=2.1.5",
+    "sqlmodel>=0.0.48",
 ]
+
+[project.urls]
+Repository = "https://github.com/EthanC/Patchy"
+
+[project.scripts]
+patchy = "patchy.__main__:main"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.0,<0.12"]
+build-backend = "uv_build"
 
-[tool.uv]
-dev-dependencies = [
-    "ruff>=0.6.2",
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "ruff>=0.17.1",
+    "ty>=0.0.89",
 ]
 
+[tool.ruff]
+target-version = "py315"
+line-length = 88
+
 [tool.ruff.lint]
-select = ["I"]
+select = ["ALL"]
+ignore = [
+    "COM812",  # Conflicts with the formatter.
+    "CPY001",  # The license applies to the whole repository.
+    "D203",    # Conflicts with D211.
+    "D213",    # Conflicts with D212.
+    "TRY400",  # Tracebacks are attached explicitly via logger.opt(exception=...).
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "D",        # Test names describe intent.
+    "PLR2004",  # Literal values are expected in assertions.
+    "S101",     # Assertions are how pytest works.
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ty.rules]
+all = "error"
+
+[tool.ty.terminal]
+error-on-warning = true
+
+[tool.pytest]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--strict-config"]

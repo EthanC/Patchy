@@ -1,0 +1,7 @@
+{
+    "success": true,
+    "result": {
+        "products": [{"base": {"icon_medium": "icon-key", "key_art": "art-key", "name": "World of Warcraft"}}],
+        "files": {"default": {"icon-key": {"hash": "1111aaaa"}, "art-key": {"hash": "2222bbbb"}}}
+    }
+}

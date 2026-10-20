@@ -1,0 +1,30 @@
+{
+    "data": {
+        "730": {
+            "_change_number": 31234567,
+            "_missing_token": false,
+            "_sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6",
+            "_size": 1234567,
+            "appid": "730",
+            "common": {
+                "name": "Counter-Strike 2",
+                "type": "Game",
+                "icon": "8dbc71957312bbd3baea65848b545be9eae2a355"
+            },
+            "depots": {
+                "branches": {
+                    "public": {
+                        "buildid": "20480931",
+                        "timeupdated": "1760650000"
+                    },
+                    "beta": {
+                        "buildid": 20491111,
+                        "timeupdated": "1760700000",
+                        "pwdrequired": "1"
+                    }
+                }
+            }
+        }
+    },
+    "status": "success"
+}
