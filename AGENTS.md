@@ -86,7 +86,7 @@ class Example(Platform[PlatformSettings]):
 ## Adding other features
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
-- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README. Platform settings (titles included) are read from `config.toml` only. `_KnownEnvironment` silently ignores `PATCHY_*` variables for platforms and for options that don't exist, so removing an option never breaks existing deployments; unknown keys in `config.toml` are still errors.
+- New settings go on the relevant model in `config.py` with a default, then in `config.example.toml` and the README. Environment variables join the path with single underscores (`discord.webhook_url` is `PATCHY_DISCORD_WEBHOOK_URL`); only the first underscore after a section name splits, so settings nest at most one level deep and top-level fields must not start with a section name followed by `_`. Add new variables to `test_every_option_has_a_single_underscore_variable`. Platform settings (titles included) are read from `config.toml` only. `_KnownEnvironment` silently ignores `PATCHY_*` variables for platforms and for options that don't exist, so removing an option never breaks existing deployments; unknown keys in `config.toml` are still errors.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.
 

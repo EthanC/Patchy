@@ -41,7 +41,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PUID=1000 \
     PGID=1000 \
     PATCHY_CONFIG=/data/config.toml \
-    PATCHY_DATABASE__PATH=/data/patchy.db
+    PATCHY_DATABASE_PATH=/data/patchy.db
 
 WORKDIR /data
 VOLUME /data

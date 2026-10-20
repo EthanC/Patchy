@@ -1,8 +1,8 @@
 """Load Patchy's settings from ``config.toml`` and environment variables.
 
 Precedence, highest first: environment variables, a ``.env`` file, ``config.toml``,
-then defaults. Environment variables use the ``PATCHY_`` prefix and ``__`` between
-nested keys, for example ``PATCHY_DISCORD__WEBHOOK_URL``.
+then defaults. Environment variables use the ``PATCHY_`` prefix and ``_`` between
+nested keys, for example ``PATCHY_DISCORD_WEBHOOK_URL``.
 
 Titles and other platform settings are the exception: they are read from
 ``config.toml`` only. Environment variables for them, or for options that do not
@@ -102,7 +102,8 @@ class Settings(BaseSettings):
 
     model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
         env_prefix="PATCHY_",
-        env_nested_delimiter="__",
+        env_nested_delimiter="_",
+        env_nested_max_split=1,
         env_file=".env",
         extra="forbid",
     )

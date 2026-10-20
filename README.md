@@ -12,17 +12,20 @@ A [Discord Webhook](https://support.discord.com/hc/en-us/articles/228383668-Intr
 
 Patchy is configured with a `config.toml` file. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it; every option is documented there.
 
-The titles to watch, and every other `[platforms.*]` setting, live in `config.toml` only. Any other option can also be set with an environment variable named `PATCHY_` followed by the option's path joined with double underscores, which takes precedence over `config.toml`.
+The titles to watch, and every other `[platforms.*]` setting, live in `config.toml` only. Any other option can also be set with an environment variable named `PATCHY_` followed by the option's path in uppercase, joined with underscores (`discord.webhook_url` is `PATCHY_DISCORD_WEBHOOK_URL`), which takes precedence over `config.toml`.
 
 | Option                   | Environment Variable                   | Description                                                     |
 | ------------------------ | -------------------------------------- | --------------------------------------------------------------- |
 | `interval`               | `PATCHY_INTERVAL`                      | Minutes between checks. `0` (default) checks once and exits.    |
 | `dry_run`                | `PATCHY_DRY_RUN`                       | Check titles without saving versions or sending notifications. |
-| `log.level`              | `PATCHY_LOG__LEVEL`                    | Console [log level](https://loguru.readthedocs.io/en/stable/api/logger.html). Default `INFO`. |
-| `log.discord_webhook_url`| `PATCHY_LOG__DISCORD_WEBHOOK_URL`      | Discord Webhook URL to forward log events to.                   |
-| `log.discord_level`      | `PATCHY_LOG__DISCORD_LEVEL`            | Minimum level forwarded to Discord. Default `WARNING`.          |
-| `discord.webhook_url`    | `PATCHY_DISCORD__WEBHOOK_URL`          | Discord Webhook URL to post update notifications to.            |
-| `database.path`          | `PATCHY_DATABASE__PATH`                | SQLite database location. Default `patchy.db`.                  |
+| `log.level`              | `PATCHY_LOG_LEVEL`                    | Console [log level](https://loguru.readthedocs.io/en/stable/api/logger.html). Default `INFO`. |
+| `log.discord_webhook_url`| `PATCHY_LOG_DISCORD_WEBHOOK_URL`      | Discord Webhook URL to forward log events to.                   |
+| `log.discord_level`      | `PATCHY_LOG_DISCORD_LEVEL`            | Minimum level forwarded to Discord. Default `WARNING`.          |
+| `discord.webhook_url`    | `PATCHY_DISCORD_WEBHOOK_URL`          | Discord Webhook URL to post update notifications to.            |
+| `database.path`          | `PATCHY_DATABASE_PATH`                | SQLite database location. Default `patchy.db`.                  |
+| `http.timeout`           | `PATCHY_HTTP_TIMEOUT`                 | Seconds to wait for upstream services. Default `30`.            |
+| `http.retries`           | `PATCHY_HTTP_RETRIES`                 | Retries for transient upstream failures. Default `3`.           |
+| (none)                   | `PATCHY_CONFIG`                       | Path to `config.toml`. Default `./config.toml`.                 |
 | `platforms.steam.titles` | `config.toml` only                     | Steam app IDs to watch.                                         |
 | `platforms.battlenet.titles` | `config.toml` only                 | Battle.net (BlizzTrack) product codes to watch.                 |
 | `platforms.prospero.titles` | `config.toml` only                  | PlayStation 5 title IDs to watch.                               |
@@ -47,7 +50,7 @@ services:
       PGID: 1000
       TZ: America/New_York
       PATCHY_INTERVAL: 30
-      PATCHY_DISCORD__WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
+      PATCHY_DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX
     volumes:
       - ./data:/data
 ```

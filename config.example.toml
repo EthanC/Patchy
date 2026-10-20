@@ -1,10 +1,10 @@
 # Patchy configuration. Copy this file to config.toml and edit it.
 #
 # Values outside [platforms.*] can also be set with an environment variable named
-# PATCHY_ followed by the key path joined with double underscores, for example:
+# PATCHY_ followed by the key path in uppercase, joined with underscores, e.g.:
 #
 #   PATCHY_INTERVAL=30
-#   PATCHY_DISCORD__WEBHOOK_URL=https://discord.com/api/webhooks/...
+#   PATCHY_DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 #
 # Environment variables take precedence over this file. Titles and other platform
 # settings can only be set here.
