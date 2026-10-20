@@ -32,6 +32,9 @@ class PlayStation(Platform[PlatformSettings]):
     site_url: ClassVar[str]
     """Base URL of the patch tracker for this console generation."""
 
+    # The trackers' CDN serves artwork without a content type.
+    proxy_media: ClassVar[bool] = True
+
     @override
     def normalize_title_id(self: Self, title_id: str) -> str:
         title_id = title_id.strip().upper()

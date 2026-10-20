@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 from typing import Any, Protocol, Self
+from urllib.parse import quote
 
 import niquests
 from clyde import Markdown, RequestPolicy, Timestamp, Webhook
@@ -24,6 +25,8 @@ from patchy import PROJECT_URL
 from patchy.errors import NotificationError
 lazy from patchy.platforms import Platform, Update
 lazy from patchy.platforms.base import Detail
+
+IMAGE_PROXY_URL: str = "https://wsrv.nl/"
 
 REQUEST_POLICY: RequestPolicy = RequestPolicy(
     connect_timeout=10.0,
@@ -152,7 +155,9 @@ def build_container(update: Update) -> Container:
             Section(
                 components=[heading],
                 accessory=Thumbnail(
-                    media=media(release.icon_url, now),
+                    media=media(
+                        release.icon_url, now, proxy=update.platform.proxy_media
+                    ),
                     description=f"{release.name} icon",
                 ),
             )
@@ -183,7 +188,9 @@ def build_container(update: Update) -> Container:
             MediaGallery(
                 items=[
                     MediaGalleryItem(
-                        media=media(release.image_url, now),
+                        media=media(
+                            release.image_url, now, proxy=update.platform.proxy_media
+                        ),
                         description=f"{release.name} artwork",
                     )
                 ]
@@ -235,7 +242,7 @@ def format_detail(value: Detail) -> str:
     return Markdown.bulleted_list(value)
 
 
-def media(url: str, now: datetime) -> UnfurledMediaItem:
+def media(url: str, now: datetime, *, proxy: bool = False) -> UnfurledMediaItem:
     """Reference an image, busting Discord's media cache.
 
     Discord caches media by URL, so artwork that changes with an update would
@@ -244,10 +251,15 @@ def media(url: str, now: datetime) -> UnfurledMediaItem:
     Args:
         url: The image URL.
         now: The time to embed in the URL.
+        proxy: Serve the image through the wsrv.nl image proxy.
 
     Returns:
         A media item for the image.
     """
     separator: str = "&" if "?" in url else "?"
+    url = f"{url}{separator}patchy={int(now.timestamp())}"
 
-    return UnfurledMediaItem(url=f"{url}{separator}patchy={int(now.timestamp())}")
+    if proxy:
+        url = f"{IMAGE_PROXY_URL}?url={quote(url, safe='')}"
+
+    return UnfurledMediaItem(url=url)

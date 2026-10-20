@@ -14,9 +14,21 @@ from patchy.platforms.base import OptionalText, Platform, Release, UpstreamModel
 
 API_URL: str = "https://blizztrack.com/api"
 
-# BlizzTrack serves artwork with a content type Discord will not render, so images
-# are passed through the wsrv.nl proxy.
-ASSET_URL: str = "https://wsrv.nl/?url=https://blizzard.blizzmeta.com"
+ASSET_URL: str = "https://blizzard.blizzmeta.com"
+
+# BlizzTrack names artwork fragments after games rather than product codes, and one
+# fragment can describe several products (World of Warcraft also holds Classic).
+# Each entry maps a product code prefix to its fragment and the product ID in it;
+# codes without an entry are looked up as a fragment of the same name.
+FRAGMENTS: tuple[tuple[str, str, str | None], ...] = (
+    ("wow_classic", "world_of_warcraft", "WoWC"),
+    ("wow", "world_of_warcraft", "WoW"),
+    ("pro", "overwatch", "Pro"),
+    ("d3", "diablo_iii", None),
+    ("hs", "hearthstone", None),
+    ("s2", "starcraft_ii", None),
+    ("hero", "heroes", None),
+)
 
 
 class BattlenetSettings(PlatformSettings):
@@ -46,10 +58,13 @@ class _VersionsResponse(UpstreamModel):
 
 class _ProductBase(UpstreamModel):
     icon_medium: OptionalText = None
+    icon_small: OptionalText = None
+    logo: OptionalText = None
     key_art: OptionalText = None
 
 
 class _Product(UpstreamModel):
+    id: str
     base: _ProductBase
 
 
@@ -159,8 +174,9 @@ class Battlenet(Platform[BattlenetSettings]):
 
     def _artwork(self: Self, title_id: str) -> tuple[str | None, str | None]:
         """Return the icon and key art URLs for a product."""
+        fragment, product_id = fragment_for(title_id)
         res: _FragmentsResponse = self.client.get_model(
-            f"{API_URL}/fragments/{title_id}", _FragmentsResponse
+            f"{API_URL}/fragments/{fragment}", _FragmentsResponse
         )
 
         if not res.success or res.result is None or not res.result.products:
@@ -168,16 +184,24 @@ class Battlenet(Platform[BattlenetSettings]):
 
             raise PayloadError(msg)
 
-        base: _ProductBase = res.result.products[0].base
+        wanted: str = (product_id or title_id).lower()
+        base: _ProductBase = next(
+            (p.base for p in res.result.products if p.id.lower() == wanted),
+            res.result.products[0].base,
+        )
         files: dict[str, _File] = res.result.files.default
 
-        def resolve(key: str | None) -> str | None:
-            if key is None or (file := files.get(key)) is None:
-                return None
+        def resolve(*keys: str | None) -> str | None:
+            for key in keys:
+                if key is not None and (file := files.get(key)) is not None:
+                    return f"{ASSET_URL}/{file.hash}"
 
-            return f"{ASSET_URL}/{file.hash}"
+            return None
 
-        return resolve(base.icon_medium), resolve(base.key_art)
+        return (
+            resolve(base.icon_medium, base.icon_small, base.logo),
+            resolve(base.key_art),
+        )
 
     def _build_name(self: Self, title_id: str, region: str, build_config: str) -> str:
         """Read the human-readable build name from a product's build config."""
@@ -213,3 +237,19 @@ class Battlenet(Platform[BattlenetSettings]):
         msg = f"Build config for product {title_id} has no build name"
 
         raise PayloadError(msg)
+
+
+def fragment_for(product: str) -> tuple[str, str | None]:
+    """Name the BlizzTrack fragment and product ID holding a product's artwork.
+
+    Args:
+        product: The Battle.net product code, such as ``wow`` or ``wow_classic``.
+
+    Returns:
+        The fragment name and, when known, the product's ID within it.
+    """
+    for prefix, fragment, product_id in FRAGMENTS:
+        if product.startswith(prefix):
+            return fragment, product_id
+
+    return product, None

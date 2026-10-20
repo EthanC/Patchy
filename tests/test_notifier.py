@@ -125,3 +125,11 @@ def test_media_cache_busting_respects_existing_query() -> None:
 
     assert media("https://a/b.png", now).url == "https://a/b.png?patchy=1767225600"
     assert media("https://a/?url=b", now).url == "https://a/?url=b&patchy=1767225600"
+
+
+def test_media_proxy_encodes_the_source() -> None:
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    assert media("https://cdn/x/pic0.webp", now, proxy=True).url == (
+        "https://wsrv.nl/?url=https%3A%2F%2Fcdn%2Fx%2Fpic0.webp%3Fpatchy%3D1767225600"
+    )

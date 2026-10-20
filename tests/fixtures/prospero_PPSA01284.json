@@ -1,11 +1,1 @@
-{
-    "success": true,
-    "metadata": {
-        "titleId": "PPSA01284",
-        "name": "Returnal",
-        "region": "EU",
-        "currentVersion": "01.004.002",
-        "icon": "https://image.api.playstation.com/vulcan/ap/rnd/202011/icon.png",
-        "background": ""
-    }
-}
+{"success":true,"metadata":{"name":"Returnal","currentVersion":"03.000.005","region":"US","icon":"https:\/\/cdn.prosperopatches.com\/titles\/PPSA01284_5b1a619e3bba373056f5d8f9ef59817b4466ebd6a2dcf6882bfff38340b89e8a\/icon0.webp","background":"https:\/\/cdn.prosperopatches.com\/titles\/PPSA01284_5b1a619e3bba373056f5d8f9ef59817b4466ebd6a2dcf6882bfff38340b89e8a\/pic0.webp","latestPatch":{"size":66503639040,"importDate":"2025-04-30 08:55:03"}}}

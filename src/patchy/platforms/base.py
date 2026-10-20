@@ -124,6 +124,10 @@ class Platform[S: PlatformSettings](ABC):
     icon_url: ClassVar[str | None] = None
     """Platform logo shown alongside notifications."""
 
+    proxy_media: ClassVar[bool] = False
+    """Serve artwork through the wsrv.nl image proxy, for hosts whose images Discord
+    may not render directly, such as ones sent without a content type."""
+
     title_id_as_code: ClassVar[bool] = True
     """Show title IDs as inline code in notifications, as they are usually codes."""
 

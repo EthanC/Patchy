@@ -1,7 +1,62 @@
 {
     "success": true,
     "result": {
-        "products": [{"base": {"icon_medium": "icon-key", "key_art": "art-key", "name": "World of Warcraft"}}],
-        "files": {"default": {"icon-key": {"hash": "1111aaaa"}, "art-key": {"hash": "2222bbbb"}}}
+        "products": [
+            {
+                "id": "WoWC",
+                "base": {
+                    "name": "world_of_warcraft#WOW_CLASSIC_NAME",
+                    "icon_tiny": "",
+                    "icon_small": "",
+                    "icon_medium": "",
+                    "default_product_type": "wow_classic",
+                    "key_art": "world_of_warcraft#WOW_CLASSIC_MOP_KEY_ART",
+                    "logo": "world_of_warcraft#WOW_CLASSIC_LOGO",
+                    "types": null
+                }
+            },
+            {
+                "id": "WoWF",
+                "base": {
+                    "name": "world_of_warcraft#WOW_FOREVER_NAME",
+                    "icon_medium": "",
+                    "key_art": "world_of_warcraft#WOW_FOREVER_KEY_ART",
+                    "logo": "world_of_warcraft#WOW_FOREVER_LOGO"
+                }
+            },
+            {
+                "id": "WoW",
+                "base": {
+                    "name": "world_of_warcraft#WOW_NAME",
+                    "icon_tiny": "world_of_warcraft#WOW_ICON_TINY",
+                    "icon_small": "world_of_warcraft#WOW_ICON_SMALL",
+                    "icon_medium": "world_of_warcraft#WOW_ICON_MEDIUM",
+                    "key_art": "world_of_warcraft#WOW_KEY_ART_MIDNIGHT",
+                    "logo": "world_of_warcraft#WOW_LOGO_MIDNIGHT"
+                }
+            }
+        ],
+        "files": {
+            "default": {
+                "world_of_warcraft#WOW_CLASSIC_MOP_KEY_ART": {"hash": "c788a4b8363f361b02c1408a6c043bee", "name": "resources/wow/key_art_wow_classic_mop_enUS.jpg"},
+                "world_of_warcraft#WOW_CLASSIC_LOGO": {"hash": "b40a2bdbc4cf91e111e0a52a47c7bde1", "name": "resources/wow/logo_wow_classic_v2.png"},
+                "world_of_warcraft#WOW_FOREVER_KEY_ART": {"hash": "d36c5deb8c5b9965bbdd286eb1459377", "name": "resources/wow/key_art_wow_forever_enUS.jpg"},
+                "world_of_warcraft#WOW_FOREVER_LOGO": {"hash": "c2efea56ca50f413826634e7ba31c2bc", "name": "resources/wow/logo_wow_forever_enUS.png"},
+                "world_of_warcraft#WOW_ICON_TINY": {"hash": "06cf45c4a978eadb10592777095131c5", "name": "resources/wow/icon_game_wow_tiny.png"},
+                "world_of_warcraft#WOW_ICON_SMALL": {"hash": "e54de9eac7d555e488c26f7483dd8f57", "name": "resources/wow/icon_game_wow_small.png"},
+                "world_of_warcraft#WOW_ICON_MEDIUM": {"hash": "ff00e970977dfc21edacec3d1863b617", "name": "resources/wow/icon_game_wow_medium.png"},
+                "world_of_warcraft#WOW_KEY_ART_MIDNIGHT": {"hash": "e0f924301ba015c64ce7ceb0a3fb8942", "name": "resources/wow/key_art_wow_midnight_enUS.jpg"},
+                "world_of_warcraft#WOW_LOGO_MIDNIGHT": {"hash": "dfa4111d7a726b947eb95bffd835ac1d", "name": "resources/wow/logo_midnight_enUS.png"},
+                "world_of_warcraft#WOW_BACKGROUND": {"hash": "3aed0f530afc4e169137eb8a6997402b", "name": "resources/wow/background_wow_v2_new_panel.webp"}
+            }
+        },
+        "installs": {},
+        "strings": {
+            "default": {
+                "world_of_warcraft#WOW_CLASSIC_NAME": "World of Warcraft Classic",
+                "world_of_warcraft#WOW_FOREVER_NAME": "WoW: Forever",
+                "world_of_warcraft#WOW_NAME": "World of Warcraft"
+            }
+        }
     }
 }

@@ -6,8 +6,9 @@ from typing import Any
 import pytest
 
 from patchy.errors import ConfigError, PayloadError, TitleNotFoundError
-from patchy.platforms import Platform, registry
+from patchy.platforms import Platform, Release, registry
 from patchy.platforms.battlenet import API_URL as BLIZZTRACK
+from patchy.platforms.battlenet import fragment_for
 from patchy.platforms.steam import API_URL as STEAMCMD
 from patchy.platforms.steam import format_size
 lazy from tests.conftest import FakeClient
@@ -181,7 +182,9 @@ def test_format_size(size: int, *, signed: bool, expected: str) -> None:
 class TestBattlenet:
     def serve(self, client: FakeClient) -> None:
         client.serve(f"{BLIZZTRACK}/manifest/wow/versions", "battlenet_versions.json")
-        client.serve(f"{BLIZZTRACK}/fragments/wow", "battlenet_fragments.json")
+        client.serve(
+            f"{BLIZZTRACK}/fragments/world_of_warcraft", "battlenet_fragments.json"
+        )
         client.serve(f"{BLIZZTRACK}/manifest/wow/cdns", "battlenet_cdns.json")
         client.serve(
             "http://us.cdn.blizzard.com/tpr/wow/config/c3/b2/c3b2f9e8d7a6b5c4d3e2f1a0b9c8d7e6",
@@ -217,15 +220,53 @@ class TestBattlenet:
 
         release = platform.enrich(platform.fetch("wow"), None)
 
-        assert (
-            release.icon_url
-            == "https://wsrv.nl/?url=https://blizzard.blizzmeta.com/1111aaaa"
-        )
-        assert (
-            release.image_url
-            == "https://wsrv.nl/?url=https://blizzard.blizzmeta.com/2222bbbb"
+        assert release.icon_url == (
+            "https://blizzard.blizzmeta.com/ff00e970977dfc21edacec3d1863b617"
+        ), "the retail product is chosen by ID, not position"
+        assert release.image_url == (
+            "https://blizzard.blizzmeta.com/e0f924301ba015c64ce7ceb0a3fb8942"
         )
         assert release.details == {"Build Name": "WOW-63904patch11.2.5_Retail"}
+
+    def test_enrich_falls_back_to_logo_without_an_icon(
+        self, client: FakeClient, make_platform: MakePlatform
+    ) -> None:
+        self.serve(client)
+        platform = make_platform("battlenet", titles=["wow_classic"])
+        release = Release(title_id="wow_classic", name="WoW Classic", version="1")
+
+        enriched = platform.enrich(release, None)
+
+        assert enriched.icon_url == (
+            "https://blizzard.blizzmeta.com/b40a2bdbc4cf91e111e0a52a47c7bde1"
+        )
+        assert enriched.image_url == (
+            "https://blizzard.blizzmeta.com/c788a4b8363f361b02c1408a6c043bee"
+        )
+
+    def test_missing_fragment_leaves_artwork_out(
+        self, client: FakeClient, make_platform: MakePlatform
+    ) -> None:
+        client.serve(
+            f"{BLIZZTRACK}/fragments/fenris", "battlenet_fragment_not_found.json"
+        )
+        platform = make_platform("battlenet", titles=["fenris"])
+        release = Release(title_id="fenris", name="Diablo IV", version="1")
+
+        assert platform.enrich(release, None) == release
+
+    @pytest.mark.parametrize(
+        ("product", "expected"),
+        [
+            ("wow", ("world_of_warcraft", "WoW")),
+            ("wowt", ("world_of_warcraft", "WoW")),
+            ("wow_classic_ptr", ("world_of_warcraft", "WoWC")),
+            ("pro", ("overwatch", "Pro")),
+            ("fenris", ("fenris", None)),
+        ],
+    )
+    def test_fragment_for(self, product: str, expected: tuple[str, str | None]) -> None:
+        assert fragment_for(product) == expected
 
     def test_enrich_survives_upstream_failures(
         self, client: FakeClient, make_platform: MakePlatform
@@ -251,10 +292,36 @@ class TestPlayStation:
         release = make_platform("prospero").fetch("PPSA01284")
 
         assert release.name == "Returnal"
-        assert release.version == "01.004.002"
-        assert release.region == "EU"
+        assert release.version == "03.000.005"
+        assert release.region == "US"
         assert release.url == "https://prosperopatches.com/PPSA01284"
-        assert release.image_url is None, "blank strings are treated as missing"
+        assert release.icon_url is not None
+        assert release.icon_url.endswith("/icon0.webp")
+        assert release.image_url is not None
+        assert release.image_url.endswith("/pic0.webp")
+
+    def test_fetch_orbis(self, client: FakeClient, make_platform: MakePlatform) -> None:
+        client.serve(
+            "https://orbispatches.com/api/lookup?titleid=CUSA00900",
+            "orbis_CUSA00900.json",
+        )
+
+        release = make_platform("orbis").fetch("CUSA00900")
+
+        assert (release.name, release.version) == ("Bloodborne™", "01.09")
+        assert release.url == "https://orbispatches.com/CUSA00900"
+
+    def test_blank_artwork_is_missing(
+        self, client: FakeClient, make_platform: MakePlatform
+    ) -> None:
+        client.responses["https://orbispatches.com/api/lookup?titleid=CUSA00419"] = (
+            '{"success": true, "metadata": {"name": "Grand Theft Auto V", '
+            '"currentVersion": "01.57", "icon": "", "background": ""}}'
+        )
+
+        release = make_platform("orbis").fetch("CUSA00419")
+
+        assert (release.icon_url, release.image_url) == (None, None)
 
     def test_not_found(self, client: FakeClient, make_platform: MakePlatform) -> None:
         client.serve(
