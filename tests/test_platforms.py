@@ -282,6 +282,17 @@ class TestBattlenet:
             "https://blizzard.blizzmeta.com/c788a4b8363f361b02c1408a6c043bee"
         )
 
+    def test_unknown_product(
+        self, client: FakeClient, make_platform: MakePlatform
+    ) -> None:
+        client.serve(
+            f"{BLIZZTRACK}/manifest/cornv1/versions",
+            "battlenet_versions_not_found.json",
+        )
+
+        with pytest.raises(TitleNotFoundError):
+            make_platform("battlenet").fetch("cornv1")
+
     def test_missing_fragment_leaves_artwork_out(
         self, client: FakeClient, make_platform: MakePlatform
     ) -> None:

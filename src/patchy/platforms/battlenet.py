@@ -5,7 +5,7 @@ from typing import ClassVar, Self, override
 lazy from datetime import datetime
 
 from loguru import logger
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from patchy.config import PlatformSettings
 from patchy.errors import PatchyError, PayloadError, TitleNotFoundError
@@ -51,11 +51,6 @@ class _Versions(UpstreamModel):
     data: list[_Version] = Field(min_length=1)
 
 
-class _VersionsResponse(UpstreamModel):
-    success: bool
-    result: _Versions | None = None
-
-
 class _ProductBase(UpstreamModel):
     icon_medium: OptionalText = None
     icon_small: OptionalText = None
@@ -81,11 +76,6 @@ class _Fragments(UpstreamModel):
     files: _Files = Field(default_factory=_Files)
 
 
-class _FragmentsResponse(UpstreamModel):
-    success: bool
-    result: _Fragments | None = None
-
-
 class _State(BaseModel):
     """What Patchy remembers about a product between checks."""
 
@@ -103,9 +93,19 @@ class _Cdns(UpstreamModel):
     data: list[_Cdn] = Field(default_factory=list)
 
 
-class _CdnsResponse(UpstreamModel):
+class _Response[T](UpstreamModel):
     success: bool
-    result: _Cdns | None = None
+    result: T | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_error(cls: type[Self], data: object) -> object:
+        # Failures arrive with HTTP 200 and an error object in place of the result,
+        # such as {"code": 404, "message": "version manifest not found"}.
+        if isinstance(data, dict) and data.get("success") is not True:
+            return {**data, "result": None}
+
+        return data
 
 
 @register
@@ -129,8 +129,8 @@ class Battlenet(Platform[BattlenetSettings]):
 
     @override
     def fetch(self: Self, title_id: str) -> Release:
-        res: _VersionsResponse = self.client.get_model(
-            f"{API_URL}/manifest/{title_id}/versions", _VersionsResponse
+        res: _Response[_Versions] = self.client.get_model(
+            f"{API_URL}/manifest/{title_id}/versions", _Response[_Versions]
         )
 
         if not res.success or res.result is None:
@@ -195,8 +195,8 @@ class Battlenet(Platform[BattlenetSettings]):
     def _artwork(self: Self, title_id: str) -> tuple[str | None, str | None]:
         """Return the icon and key art URLs for a product."""
         fragment, product_id = fragment_for(title_id)
-        res: _FragmentsResponse = self.client.get_model(
-            f"{API_URL}/fragments/{fragment}", _FragmentsResponse
+        res: _Response[_Fragments] = self.client.get_model(
+            f"{API_URL}/fragments/{fragment}", _Response[_Fragments]
         )
 
         if not res.success or res.result is None or not res.result.products:
@@ -234,8 +234,8 @@ class Battlenet(Platform[BattlenetSettings]):
 
         The previous build is best effort: its config may have left the CDN.
         """
-        res: _CdnsResponse = self.client.get_model(
-            f"{API_URL}/manifest/{title_id}/cdns", _CdnsResponse
+        res: _Response[_Cdns] = self.client.get_model(
+            f"{API_URL}/manifest/{title_id}/cdns", _Response[_Cdns]
         )
 
         if not res.success or res.result is None:
