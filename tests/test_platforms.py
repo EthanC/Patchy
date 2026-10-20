@@ -226,7 +226,45 @@ class TestBattlenet:
         assert release.image_url == (
             "https://blizzard.blizzmeta.com/e0f924301ba015c64ce7ceb0a3fb8942"
         )
-        assert release.details == {"Build Name": "WOW-63904patch11.2.5_Retail"}
+        assert release.build == "WOW-63904patch11.2.5_Retail"
+        assert release.previous_build is None, "no previous build config is known"
+        assert release.details == {}
+
+    def test_enrich_names_the_previous_build(
+        self, client: FakeClient, make_platform: MakePlatform
+    ) -> None:
+        self.serve(client)
+        client.serve(
+            "http://us.cdn.blizzard.com/tpr/wow/config/0f/1e/0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+            "battlenet_build_config_previous.txt",
+        )
+        platform = make_platform("battlenet", titles=["wow"])
+        previous = '{"build_config": "0f1e2d3c4b5a69788796a5b4c3d2e1f0"}'
+
+        release = platform.enrich(platform.fetch("wow"), previous)
+
+        assert release.build == "WOW-63904patch11.2.5_Retail"
+        assert release.previous_build == "WOW-63796patch11.2.5_Retail"
+
+    @pytest.mark.parametrize(
+        "previous",
+        ['{"build_config": "deadbeefdeadbeefdeadbeefdeadbeef"}', "not json"],
+    )
+    def test_enrich_survives_a_missing_previous_build(
+        self, client: FakeClient, make_platform: MakePlatform, previous: str
+    ) -> None:
+        self.serve(client)
+        platform = make_platform("battlenet", titles=["wow"])
+
+        release = platform.enrich(platform.fetch("wow"), previous)
+
+        assert release.build == "WOW-63904patch11.2.5_Retail"
+        assert release.previous_build is None
+
+    def test_title_ids_are_displayed_uppercase(
+        self, make_platform: MakePlatform
+    ) -> None:
+        assert make_platform("battlenet").display_title_id("wow") == "WOW"
 
     def test_enrich_falls_back_to_logo_without_an_icon(
         self, client: FakeClient, make_platform: MakePlatform

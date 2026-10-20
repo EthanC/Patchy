@@ -5,7 +5,7 @@ from typing import ClassVar, Self, override
 lazy from datetime import datetime
 
 from loguru import logger
-from pydantic import Field
+from pydantic import BaseModel, Field, ValidationError
 
 from patchy.config import PlatformSettings
 from patchy.errors import PatchyError, PayloadError, TitleNotFoundError
@@ -86,6 +86,13 @@ class _FragmentsResponse(UpstreamModel):
     result: _Fragments | None = None
 
 
+class _State(BaseModel):
+    """What Patchy remembers about a product between checks."""
+
+    build_config: str
+    """Hash of the tracked region's build config, which names the build."""
+
+
 class _Cdn(UpstreamModel):
     name: str
     path: str
@@ -117,6 +124,10 @@ class Battlenet(Platform[BattlenetSettings]):
         return title_id.strip().lower()
 
     @override
+    def display_title_id(self: Self, title_id: str) -> str:
+        return title_id.upper()
+
+    @override
     def fetch(self: Self, title_id: str) -> Release:
         res: _VersionsResponse = self.client.get_model(
             f"{API_URL}/manifest/{title_id}/versions", _VersionsResponse
@@ -140,14 +151,15 @@ class Battlenet(Platform[BattlenetSettings]):
             url=f"https://blizztrack.com/view/{res.result.tact}?type=versions",
             region=version.name,
             released_at=res.result.created_at,
-            context={"build_config": version.build_config},
+            state=_State(build_config=version.build_config).model_dump_json(),
         )
 
     @override
     def enrich(self: Self, release: Release, previous_state: str | None) -> Release:
         icon_url: str | None = None
         image_url: str | None = None
-        build_name: str | None = None
+        build: str | None = None
+        previous_build: str | None = None
 
         try:
             icon_url, image_url = self._artwork(release.title_id)
@@ -156,20 +168,28 @@ class Battlenet(Platform[BattlenetSettings]):
                 f"Failed to fetch artwork for Battle.net title {release.name}"
             )
 
-        build_config: str | None = release.context.get("build_config")
+        current: _State | None = _read_state(release.state)
+        previous: _State | None = _read_state(previous_state)
 
-        if build_config is not None and release.region is not None:
+        if current is not None and release.region is not None:
             try:
-                build_name = self._build_name(
-                    release.title_id, release.region, build_config
+                build, previous_build = self._build_names(
+                    release.title_id,
+                    release.region,
+                    current.build_config,
+                    previous.build_config if previous is not None else None,
                 )
             except PatchyError as e:
                 logger.opt(exception=e).warning(
-                    f"Failed to fetch build name for Battle.net title {release.name}"
+                    f"Failed to fetch build names for Battle.net title {release.name}"
                 )
 
-        return replace(release, icon_url=icon_url, image_url=image_url).with_details(
-            **{"Build Name": build_name}
+        return replace(
+            release,
+            icon_url=icon_url,
+            image_url=image_url,
+            build=build,
+            previous_build=previous_build,
         )
 
     def _artwork(self: Self, title_id: str) -> tuple[str | None, str | None]:
@@ -203,8 +223,17 @@ class Battlenet(Platform[BattlenetSettings]):
             resolve(base.key_art),
         )
 
-    def _build_name(self: Self, title_id: str, region: str, build_config: str) -> str:
-        """Read the human-readable build name from a product's build config."""
+    def _build_names(
+        self: Self,
+        title_id: str,
+        region: str,
+        build_config: str,
+        previous_build_config: str | None,
+    ) -> tuple[str, str | None]:
+        """Name the current build and, when its config is known, the previous one.
+
+        The previous build is best effort: its config may have left the CDN.
+        """
         res: _CdnsResponse = self.client.get_model(
             f"{API_URL}/manifest/{title_id}/cdns", _CdnsResponse
         )
@@ -223,10 +252,25 @@ class Battlenet(Platform[BattlenetSettings]):
 
             raise PayloadError(msg)
 
+        base_url: str = f"http://{hosts[0]}/{cdn.path}"
+        previous: str | None = None
+
+        if previous_build_config is not None:
+            try:
+                previous = self._build_name(base_url, title_id, previous_build_config)
+            except PatchyError as e:
+                logger.opt(exception=e).debug(
+                    f"Failed to name the previous build of Battle.net title {title_id}"
+                )
+
+        return self._build_name(base_url, title_id, build_config), previous
+
+    def _build_name(self: Self, base_url: str, title_id: str, build_config: str) -> str:
+        """Read the human-readable build name from a build config on a CDN."""
         # Mirrors how the BlizzTrack front-end locates a build config.
         # https://github.com/BlizzTrack/BlizzTrack/blob/d10e550bd1588338c39f10f48c744679aef3b62c/BlizzTrack/Pages/Partials/_view_versions.cshtml#L89
         path: str = f"config/{build_config[:2]}/{build_config[2:4]}/{build_config}"
-        config: str = self.client.get_text(f"http://{hosts[0]}/{cdn.path}/{path}")
+        config: str = self.client.get_text(f"{base_url}/{path}")
 
         for line in config.splitlines():
             key, _, value = line.partition(" = ")
@@ -234,7 +278,7 @@ class Battlenet(Platform[BattlenetSettings]):
             if key.strip() == "build-name" and value.strip():
                 return value.strip()
 
-        msg = f"Build config for product {title_id} has no build name"
+        msg: str = f"Build config for product {title_id} has no build name"
 
         raise PayloadError(msg)
 
@@ -253,3 +297,14 @@ def fragment_for(product: str) -> tuple[str, str | None]:
             return fragment, product_id
 
     return product, None
+
+
+def _read_state(state: str | None) -> _State | None:
+    """Parse stored state, treating anything unreadable as missing."""
+    if state is None:
+        return None
+
+    try:
+        return _State.model_validate_json(state)
+    except ValidationError:
+        return None

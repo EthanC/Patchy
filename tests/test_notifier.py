@@ -98,7 +98,24 @@ def test_title_ids_are_code_except_on_steam() -> None:
     battlenet_text = msgspec.json.encode(build_container(battlenet)).decode()
 
     assert "-# Steam · 730" in steam_text
-    assert "-# Battle.net · `wow` · Americas" in battlenet_text
+    assert "-# Battle.net · `WOW` · Americas" in battlenet_text
+
+
+@pytest.mark.parametrize(
+    ("builds", "expected"),
+    [
+        ({}, "- 20480000\\n+ 20480931"),
+        ({"build": "B2"}, "- 20480000\\n+ 20480931 B2"),
+        (
+            {"build": "B2", "previous_build": "B1"},
+            "- 20480000 B1\\n+ 20480931 B2",
+        ),
+    ],
+)
+def test_diff_shows_builds(builds: dict[str, str], expected: str) -> None:
+    text = msgspec.json.encode(build_container(make_update(**builds))).decode()
+
+    assert expected in text
 
 
 def test_buttons_without_release_url() -> None:

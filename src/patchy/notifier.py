@@ -129,11 +129,12 @@ def build_container(update: Update) -> Container:
     release = update.release
     now: datetime = datetime.now(UTC)
 
+    title_id: str = update.platform.display_title_id(release.title_id)
     subtitle: list[str] = [
         update.platform.name,
-        Markdown.inline_code(release.title_id)
+        Markdown.inline_code(title_id)
         if update.platform.title_id_as_code
-        else release.title_id,
+        else title_id,
     ]
 
     if release.region is not None:
@@ -168,7 +169,9 @@ def build_container(update: Update) -> Container:
     components.append(
         TextDisplay(
             content=Markdown.code_block(
-                f"- {update.previous_version}\n+ {release.version}", "diff"
+                f"- {with_build(update.previous_version, release.previous_build)}\n"
+                f"+ {with_build(release.version, release.build)}",
+                "diff",
             )
         )
     )
@@ -232,6 +235,11 @@ def build_buttons(update: Update) -> ActionRow:
     buttons.append(LinkButton(label="Powered by Patchy", url=PROJECT_URL))
 
     return ActionRow(components=buttons)
+
+
+def with_build(version: str, build: str | None) -> str:
+    """Follow a version with its build, when known."""
+    return version if build is None else f"{version} {build}"
 
 
 def format_detail(value: Detail) -> str:

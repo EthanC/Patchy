@@ -54,6 +54,14 @@ class Release:
     version: str
     """Current version string. Any change to this value is reported as an update."""
 
+    build: str | None = None
+    """Human-readable build shown after the version, such as a Battle.net build
+    name. Usually filled in by ``enrich()``."""
+
+    previous_build: str | None = None
+    """The previous version's build, shown after it. Filled in by ``enrich()``,
+    typically from ``previous_state``."""
+
     url: str | None = None
     """Page to open for more information, such as patch notes."""
 
@@ -72,9 +80,6 @@ class Release:
     details: Mapping[str, Detail] = field(default_factory=dict)
     """Additional labelled values to show in notifications, such as a build name or
     a list of changed depots."""
-
-    context: Mapping[str, str] = field(default_factory=dict, repr=False)
-    """Platform-private values passed from ``fetch()`` to ``enrich()``. Never shown."""
 
     state: str | None = field(default=None, repr=False)
     """Platform-private data stored with the version, such as Steam depot manifests.
@@ -216,6 +221,17 @@ class Platform[S: PlatformSettings](ABC):
             ConfigError: The identifier is not valid for this platform.
         """
         return title_id.strip()
+
+    def display_title_id(self: Self, title_id: str) -> str:
+        """Return a title identifier as notifications should show it.
+
+        Args:
+            title_id: The normalized title identifier.
+
+        Returns:
+            The identifier to display.
+        """
+        return title_id
 
     @abstractmethod
     def fetch(self: Self, title_id: str) -> Release:
