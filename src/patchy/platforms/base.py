@@ -124,6 +124,9 @@ class Platform[S: PlatformSettings](ABC):
     icon_url: ClassVar[str | None] = None
     """Platform logo shown alongside notifications."""
 
+    title_id_as_code: ClassVar[bool] = True
+    """Show title IDs as inline code in notifications, as they are usually codes."""
+
     settings_model: ClassVar[type[PlatformSettings]] = PlatformSettings
     """Model used to validate each ``[[platforms.<key>]]`` instance table."""
 

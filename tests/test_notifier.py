@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -8,8 +9,9 @@ from clyde.components import Container
 
 from patchy.client import HttpClient
 from patchy.errors import NotificationError
-from patchy.notifier import DiscordNotifier, media
+from patchy.notifier import DiscordNotifier, build_container, media
 from patchy.platforms import Release, Update
+from patchy.platforms.battlenet import Battlenet, BattlenetSettings
 from patchy.platforms.steam import Steam, SteamSettings
 
 WEBHOOK_URL: str = "https://discord.com/api/webhooks/1/token"
@@ -82,6 +84,21 @@ def test_layout() -> None:
     assert "**Depots**\\n- Windows +1.0 MB\\n- Linux added" in text
     assert '"description":"Counter-Strike 2 icon"' in text
     assert '"description":"Counter-Strike 2 artwork"' in text
+
+
+def test_title_ids_are_code_except_on_steam() -> None:
+    battlenet = make_update()
+    battlenet = replace(
+        battlenet,
+        platform=Battlenet(BattlenetSettings(), HttpClient(timeout=1, retries=0)),
+        release=replace(battlenet.release, title_id="wow", region="Americas"),
+    )
+
+    steam_text = msgspec.json.encode(build_container(make_update())).decode()
+    battlenet_text = msgspec.json.encode(build_container(battlenet)).decode()
+
+    assert "-# Steam · 730" in steam_text
+    assert "-# Battle.net · `wow` · Americas" in battlenet_text
 
 
 def test_buttons_without_release_url() -> None:

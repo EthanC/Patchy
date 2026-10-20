@@ -129,6 +129,7 @@ class Steam(Platform[SteamSettings]):
     key: ClassVar[str] = "steam"
     name: ClassVar[str] = "Steam"
     source: ClassVar[str] = "SteamDB"
+    title_id_as_code: ClassVar[bool] = False
     color: ClassVar[int] = 0x1B2838
     icon_url: ClassVar[str | None] = "https://i.imgur.com/oYkhH6s.png"
     settings_model: ClassVar[type[PlatformSettings]] = SteamSettings
