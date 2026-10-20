@@ -52,13 +52,14 @@ class LogSettings(BaseModel):
 
 
 class DiscordSettings(BaseModel):
-    """Where and how update notifications are delivered."""
+    """Where update notifications are delivered.
+
+    The webhook's name and avatar are managed in Discord.
+    """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     webhook_url: HttpUrl | None = None
-    username: str = "Patchy"
-    avatar_url: HttpUrl | None = None
 
 
 class DatabaseSettings(BaseModel):

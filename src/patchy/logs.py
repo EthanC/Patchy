@@ -8,7 +8,7 @@ from loguru_discord import DiscordSink
 lazy from patchy.config import LogSettings
 
 
-def configure_logging(settings: LogSettings, *, username: str) -> None:
+def configure_logging(settings: LogSettings) -> None:
     """Replace Loguru's default sink with Patchy's configured sinks.
 
     Standard-library logging (used by SQLAlchemy and niquests) is routed through
@@ -16,7 +16,6 @@ def configure_logging(settings: LogSettings, *, username: str) -> None:
 
     Args:
         settings: Logging settings.
-        username: Name the Discord log forwarder posts as.
     """
     logger.remove()
     logger.add(sys.stderr, level=settings.level, backtrace=False, diagnose=False)
@@ -29,7 +28,6 @@ def configure_logging(settings: LogSettings, *, username: str) -> None:
     logger.add(
         DiscordSink(
             str(settings.discord_webhook_url),
-            username=username,
             rich=True,
             intercept=True,
         ),

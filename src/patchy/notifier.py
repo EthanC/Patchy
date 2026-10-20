@@ -21,7 +21,6 @@ from loguru import logger
 lazy from clyde.components.container import ContainerComponent
 
 from patchy.errors import NotificationError
-lazy from patchy.config import DiscordSettings
 lazy from patchy.platforms import Update
 
 REQUEST_POLICY: RequestPolicy = RequestPolicy(
@@ -50,14 +49,12 @@ class Notifier(Protocol):
 class DiscordNotifier:
     """Post updates to a Discord webhook as Components V2 messages."""
 
-    def __init__(self: Self, settings: DiscordSettings, webhook_url: str) -> None:
+    def __init__(self: Self, webhook_url: str) -> None:
         """Create a notifier.
 
         Args:
-            settings: Discord settings.
             webhook_url: Webhook to post notifications to.
         """
-        self.settings: DiscordSettings = settings
         self.webhook_url: str = webhook_url
 
     def send(self: Self, update: Update) -> None:
@@ -92,12 +89,7 @@ class DiscordNotifier:
         Returns:
             The webhook message.
         """
-        webhook: Webhook = Webhook(
-            url=self.webhook_url, username=self.settings.username
-        )
-
-        if self.settings.avatar_url is not None:
-            webhook.set_avatar_url(str(self.settings.avatar_url))
+        webhook: Webhook = Webhook(url=self.webhook_url)
 
         webhook.add_component(build_container(update))
 

@@ -85,12 +85,12 @@ def main(argv: list[str] | None = None) -> int:
     try:
         settings: Settings = Settings.load(args.config)
     except PatchyError as e:
-        configure_logging(LogSettings(), username="Patchy")
+        configure_logging(LogSettings())
         logger.critical(str(e))
 
         return EXIT_FAILURE
 
-    configure_logging(settings.log, username=settings.discord.username)
+    configure_logging(settings.log)
 
     try:
         match args.command:
@@ -135,7 +135,7 @@ def _run(settings: Settings, *, once: bool, dry_run: bool) -> None:
     notifier: Notifier | None = None
 
     if settings.discord.webhook_url is not None:
-        notifier = DiscordNotifier(settings.discord, str(settings.discord.webhook_url))
+        notifier = DiscordNotifier(str(settings.discord.webhook_url))
     else:
         logger.warning("No Discord webhook is configured, updates will only be logged")
 
