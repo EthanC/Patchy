@@ -57,12 +57,9 @@ class TestEnvironment:
     ) -> None:
         variables: dict[str, str] = {
             "PATCHY_INTERVAL": "30",
-            "PATCHY_DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/1/env",
             "PATCHY_PLATFORMS_STEAM_TITLES": "440",
-            "PATCHY_DISCORD_USERNAME": "Renovate",
-            "PATCHY_LOG_SOMETHING_OLD": "1",
+            "PATCHY_LOG_NOT_AN_OPTION": "1",
             "PATCHY_NOT_AN_OPTION": "1",
-            "STEAM_TITLES": "730",
             "PATCHY_LOG_LEVEL": "debug",
         }
 

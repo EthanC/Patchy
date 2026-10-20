@@ -23,13 +23,12 @@ uv run patchy --help       # run the CLI
 
 ```
 src/patchy/
-  __main__.py      CLI (argparse): run, import-history, platforms. Signal handling and the interval loop.
+  __main__.py      CLI (argparse): run, platforms. Signal handling and the interval loop.
   config.py        EnvironmentSettings (PATCHY_* env vars) and FileSettings (config.toml); no setting is in both. PlatformSettings: one platform instance.
   client.py        HttpClient: niquests session with retries; raises FetchError / PayloadError only.
   database.py      SQLModel tables (TitleRecord, UpdateRecord) and the Database wrapper.
   errors.py        PatchyError hierarchy. Every expected failure is one of these.
   logs.py          Loguru sinks: stderr and optional loguru-discord forwarding.
-  migrate.py       Import of Renovate's history.json.
   notifier.py      Notifier protocol, DiscordNotifier (discord-clyde, Components V2), and discord_notifier() for an instance's webhook.
   runner.py        build_platforms() and Runner: per-title check loop, persistence, and error containment.
   platforms/
@@ -97,7 +96,7 @@ class Example(Platform[PlatformSettings]):
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
 - Every setting lives in exactly one place. Runtime behaviour (dry run, logging, database path, HTTP, the config path) goes on `EnvironmentSettings`, documented in `.env.example` and the README's variable table. What to watch and where to report it (interval, and per instance: titles, webhook, platform options) goes on `FileSettings` or `PlatformSettings`, documented in `config.example.toml` and the README's option table. Never add a setting to both.
-- Environment variables join the path with single underscores (`log.level` is `PATCHY_LOG_LEVEL`); only the first underscore after a section name splits, so environment settings nest at most one level deep. Unknown `PATCHY_*` variables are ignored so removing an option never breaks a deployment. `FileSettings.load()` rejects unknown keys and reports environment settings found in `config.toml` with the variable to use instead. Cover new variables in `TestEnvironment.test_every_variable`.
+- Environment variables join the path with single underscores (`log.level` is `PATCHY_LOG_LEVEL`); only the first underscore after a section name splits, so environment settings nest at most one level deep. Unknown `PATCHY_*` variables, and variables for `config.toml` settings, are ignored. `FileSettings.load()` rejects unknown keys and reports environment settings found in `config.toml` with the variable to use instead. Cover new variables in `TestEnvironment.test_every_variable`.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.
 

@@ -17,7 +17,6 @@ from patchy.config import EnvironmentSettings, FileSettings, LogSettings
 from patchy.database import Database
 from patchy.errors import ConfigError, PatchyError
 from patchy.logs import configure_logging
-from patchy.migrate import import_renovate_history
 from patchy.platforms import Platform, registry
 from patchy.runner import Runner, build_platforms
 
@@ -60,15 +59,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="check titles without saving versions or sending notifications",
     )
 
-    history = commands.add_parser(
-        "import-history", help="import versions from a Renovate history.json file"
-    )
-    history.add_argument("path", type=Path, help="path to history.json")
-    history.add_argument(
-        "--instance",
-        help="platform instance name to import into (default: each unnamed instance)",
-    )
-
     commands.add_parser("platforms", help="list available platforms")
 
     return parser.parse_args(argv)
@@ -95,17 +85,12 @@ def main(argv: list[str] | None = None) -> int:
     configure_logging(environment.log)
 
     try:
-        match args.command:
-            case "import-history":
-                with _open_database(environment) as database:
-                    import_renovate_history(args.path, database, instance=args.instance)
-            case _:
-                _run(
-                    environment,
-                    FileSettings.load(args.config or environment.config),
-                    once=args.once,
-                    dry_run=args.dry_run or environment.dry_run,
-                )
+        _run(
+            environment,
+            FileSettings.load(args.config or environment.config),
+            once=args.once,
+            dry_run=args.dry_run or environment.dry_run,
+        )
     except ConfigError as e:
         logger.critical(str(e))
 

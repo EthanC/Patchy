@@ -4,7 +4,7 @@
 
 Patchy monitors games on Steam, Battle.net, and PlayStation and notifies about updates via Discord.
 
-Patchy is the successor to Renovate. It checks each configured title's current version, remembers it in a SQLite database, and posts a Discord message when the version changes.
+Patchy checks each configured title's current version, remembers it in a SQLite database, and posts a Discord message when the version changes.
 
 ## Setup
 
@@ -95,20 +95,6 @@ Patchy requires [Python 3.15](https://www.python.org/) and [uv](https://github.c
 3. Start Patchy: `uv run patchy`
 
 Run `uv run patchy --help` for every command and option.
-
-### Migrating from Renovate
-
-Patchy can import Renovate's `history.json` so titles you already track aren't reported as new:
-
-```sh
-uv run patchy import-history path/to/history.json
-# or, with Docker
-docker compose run --rm patchy patchy import-history /data/history.json
-```
-
-Renovate's `STEAM_TITLES`, `BATTLE_TITLES`, `PROSPERO_TITLES`, and `ORBIS_TITLES` become the `titles` lists under `[[platforms.steam]]`, `[[platforms.battlenet]]`, `[[platforms.prospero]]`, and `[[platforms.orbis]]` in `config.toml`, and `DISCORD_WEBHOOK_URL` becomes each instance's `webhook_url`.
-
-History is imported into each platform's unnamed instance. If your instances have names, pass `--instance <name>` to import into that one instead.
 
 ## Development
 
