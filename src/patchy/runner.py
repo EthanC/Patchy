@@ -1,5 +1,6 @@
 """Check every configured title and report updates."""
 
+import time
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import Any, Self, override
@@ -121,6 +122,79 @@ def build_platforms(
     return platforms
 
 
+class Schedule:
+    """When each platform instance is next due to be checked.
+
+    Every instance is due immediately. After a check, an instance is due again
+    after its own ``interval``, or the default when it sets none; an interval of
+    ``0`` means it is not checked again.
+    """
+
+    def __init__(
+        self: Self,
+        platforms: Sequence[Platform[Any]],
+        default_interval: int,
+        *,
+        once: bool = False,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        """Create a schedule.
+
+        Args:
+            platforms: Platform instances to schedule.
+            default_interval: Minutes between checks of instances that set none.
+            once: Check every instance once, ignoring every interval.
+            clock: Returns the current time in seconds.
+        """
+        self.clock: Callable[[], float] = clock
+        self.intervals: dict[Platform[Any], int] = {
+            platform: 0
+            if once
+            else (
+                default_interval
+                if platform.settings.interval is None
+                else platform.settings.interval
+            )
+            for platform in platforms
+        }
+        now: float = clock()
+        self.due_at: dict[Platform[Any], float] = dict.fromkeys(platforms, now)
+
+    def pop_due(self: Self) -> list[Platform[Any]]:
+        """Take the instances due now and schedule their next check.
+
+        Returns:
+            The instances to check, in configuration order.
+        """
+        now: float = self.clock()
+        due: list[Platform[Any]] = [p for p, at in self.due_at.items() if at <= now]
+
+        for platform in due:
+            if (minutes := self.intervals[platform]) == 0:
+                del self.due_at[platform]
+            else:
+                self.due_at[platform] = now + minutes * 60
+
+        return due
+
+    def next_check(self: Self) -> tuple[float, list[Platform[Any]]] | None:
+        """Find the next instances due to be checked.
+
+        Returns:
+            Seconds until they are due and the instances, or ``None`` when no
+            instance is checked again.
+        """
+        if not self.due_at:
+            return None
+
+        at: float = min(self.due_at.values())
+
+        return (
+            max(0.0, at - self.clock()),
+            [p for p, due in self.due_at.items() if due == at],
+        )
+
+
 class Runner:
     """Check titles, persist versions, and send notifications."""
 
@@ -148,10 +222,13 @@ class Runner:
         }
         self.dry_run: bool = dry_run
 
-    def run(self: Self) -> Summary:
-        """Check every title in every platform instance once.
+    def run(self: Self, platforms: Sequence[Platform[Any]] | None = None) -> Summary:
+        """Check every title in the given platform instances once.
 
         A failure checking one title is logged and does not stop the others.
+
+        Args:
+            platforms: Instances to check. ``None`` checks every instance.
 
         Returns:
             Counts of each outcome.
@@ -161,7 +238,7 @@ class Runner:
         """
         summary: Summary = Summary()
 
-        for platform in self.platforms:
+        for platform in self.platforms if platforms is None else platforms:
             for title_id in platform.titles:
                 summary.add(self._check_safely(platform, title_id))
 

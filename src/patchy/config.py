@@ -3,8 +3,8 @@
 Runtime settings come from ``PATCHY_*`` environment variables (or a ``.env`` file):
 dry run, logging, the database path, HTTP behaviour, and the ``config.toml`` path.
 
-What to watch and where to report it comes from ``config.toml``: the interval and
-every platform instance, each with its own titles, webhook, and options.
+What to watch and where to report it comes from ``config.toml``: the default interval
+and every platform instance, each with its own titles, webhook, interval, and options.
 
 A setting is never read from both. Environment variables for ``config.toml``
 settings, or for options that do not exist, are ignored; environment settings
@@ -89,6 +89,10 @@ class PlatformSettings(BaseModel):
     titles: list[str] = Field(default_factory=list)
     """Title identifiers to watch."""
 
+    interval: Annotated[int, Field(ge=0)] | None = None
+    """Minutes between checks of this instance; ``0`` checks it once. ``None`` uses
+    the top-level ``interval``."""
+
     @field_validator("titles")
     @classmethod
     def _dedupe_titles(cls, value: list[str]) -> list[str]:
@@ -142,7 +146,8 @@ class FileSettings(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     interval: Annotated[int, Field(ge=0)] = 0
-    """Minutes between checks. ``0`` checks once and exits."""
+    """Default minutes between checks of each instance; ``0`` checks once. Patchy
+    exits when no instance is due to be checked again."""
 
     platforms: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
     """Raw settings for each instance, keyed by platform key. Each instance is

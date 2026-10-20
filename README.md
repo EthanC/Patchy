@@ -14,7 +14,7 @@ Patchy reads each setting from exactly one place.
 
 **`config.toml`** holds what to watch and where to report it. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it.
 
-`interval` sets the minutes between checks. `0` (the default) checks once and exits.
+`interval` sets the default minutes between checks of each instance. `0` (the default) checks once. Patchy exits once no instance is due to be checked again.
 
 Each `[[platforms.<key>]]` table is one instance of a platform with its own titles and webhook. Repeat a table to watch another set of titles on the same platform, for example two Steam instances posting to different channels.
 
@@ -24,6 +24,7 @@ Each `[[platforms.<key>]]` table is one instance of a platform with its own titl
 | `enabled`       | Whether this instance is checked. Default `true`.                           |
 | `webhook_url`   | Discord Webhook URL for this instance's updates. Omit to only log them.     |
 | `titles`        | Title IDs to watch.                                                         |
+| `interval`      | Minutes between checks of this instance; `0` checks it once. Defaults to the top-level `interval`. |
 | `branch`        | Steam only. Depot branch to track. Default `public`.                        |
 | `region`        | Battle.net only. Region to track. Default `Americas`.                       |
 
@@ -41,6 +42,7 @@ titles = ["730", "440"]
 name = "betas"
 webhook_url = "https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY"
 titles = ["730"]
+interval = 5
 branch = "beta"
 ```
 
@@ -86,7 +88,7 @@ services:
       - ./data:/data
 ```
 
-Set `interval` in `config.toml` to have Patchy check on its own. To use cron or another scheduler instead, leave `interval` at `0` and run the container on your schedule without `restart`.
+Set `interval` in `config.toml`, globally or per instance, to have Patchy check on its own. To use cron or another scheduler instead, leave every `interval` at `0` and run the container on your schedule without `restart`.
 
 ### Standalone
 

@@ -4,7 +4,8 @@
 # (dry run, logging, database path, HTTP behaviour) are set with PATCHY_*
 # environment variables instead; see .env.example. No setting is read from both.
 
-# Minutes between checks. 0 checks once and exits, for use with cron.
+# Default minutes between checks of each instance. 0 checks once; Patchy exits
+# once no instance is due again, for use with cron.
 interval = 0
 
 # Each [[platforms.<key>]] table is one instance of that platform. Repeat a
@@ -20,6 +21,8 @@ interval = 0
 #   webhook_url  Discord webhook this instance's updates are posted to. Omit
 #                to only log updates.
 #   titles       Title IDs to watch.
+#   interval     Minutes between checks of this instance. 0 checks it once.
+#                Defaults to the top-level interval.
 
 # Steam app IDs, from store.steampowered.com/app/<id> or steamdb.info.
 [[platforms.steam]]
@@ -35,6 +38,7 @@ name = "betas"
 enabled = true
 webhook_url = "https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY"
 titles = ["730"]
+interval = 5
 branch = "beta"
 
 # BlizzTrack product codes, from blizztrack.com.

@@ -10,7 +10,7 @@ from patchy.errors import ConfigError, FetchError, NotificationError, StorageErr
 from patchy.notifier import DiscordNotifier, discord_notifier
 from patchy.platforms import Platform, Update
 from patchy.platforms.steam import API_URL as STEAMCMD
-from patchy.runner import Outcome, Runner, build_platforms
+from patchy.runner import Outcome, Runner, Schedule, build_platforms
 lazy from tests.conftest import FakeClient
 
 type MakePlatform = Callable[..., Platform[Any]]
@@ -241,6 +241,10 @@ class TestBuildPlatforms:
             ("orbis", "orbis"),
         ]
 
+    def test_negative_interval_is_rejected(self, client: FakeClient) -> None:
+        with pytest.raises(ConfigError, match=r"platforms\.steam\[0\].*interval"):
+            build_platforms({"steam": [{"titles": ["730"], "interval": -1}]}, client)
+
     def test_unknown_platform(self, client: FakeClient) -> None:
         with pytest.raises(ConfigError, match="Unknown platform 'xbox'"):
             build_platforms({"xbox": [{"titles": ["halo"]}]}, client)
@@ -332,3 +336,88 @@ class TestInstances:
         notifier = discord_notifier(with_webhook)
         assert isinstance(notifier, DiscordNotifier)
         assert notifier.webhook_url == "https://discord.com/api/webhooks/1/a"
+
+
+class Clock:
+    def __init__(self: Self) -> None:
+        self.now: float = 1000.0
+
+    def __call__(self: Self) -> float:
+        return self.now
+
+
+class TestSchedule:
+    @pytest.fixture
+    def clock(self) -> Clock:
+        return Clock()
+
+    def test_instances_use_their_own_interval(
+        self, make_platform: MakePlatform, clock: Clock
+    ) -> None:
+        fast = make_platform("steam", name="fast", titles=["730"], interval=5)
+        default = make_platform("steam", name="default", titles=["440"])
+        schedule = Schedule([fast, default], 30, clock=clock)
+
+        assert schedule.pop_due() == [fast, default]
+        assert schedule.next_check() == (300.0, [fast])
+
+        clock.now += 300
+        assert schedule.pop_due() == [fast]
+        assert schedule.next_check() == (300.0, [fast])
+
+        clock.now = 1000 + 1800
+        assert schedule.pop_due() == [fast, default]
+
+    def test_nothing_is_due_before_its_time(
+        self, make_platform: MakePlatform, clock: Clock
+    ) -> None:
+        steam = make_platform("steam", titles=["730"])
+        schedule = Schedule([steam], 10, clock=clock)
+        schedule.pop_due()
+
+        clock.now += 599
+
+        assert schedule.pop_due() == []
+        assert schedule.next_check() == (1.0, [steam])
+
+    def test_zero_interval_checks_once(
+        self, make_platform: MakePlatform, clock: Clock
+    ) -> None:
+        once = make_platform("steam", name="once", titles=["730"], interval=0)
+        repeat = make_platform("steam", name="repeat", titles=["440"])
+        schedule = Schedule([once, repeat], 10, clock=clock)
+
+        assert schedule.pop_due() == [once, repeat]
+        assert schedule.next_check() == (600.0, [repeat])
+
+    def test_ends_when_nothing_repeats(
+        self, make_platform: MakePlatform, clock: Clock
+    ) -> None:
+        steam = make_platform("steam", titles=["730"])
+        schedule = Schedule([steam], 0, clock=clock)
+
+        assert schedule.pop_due() == [steam]
+        assert schedule.next_check() is None
+
+    def test_once_ignores_every_interval(
+        self, make_platform: MakePlatform, clock: Clock
+    ) -> None:
+        steam = make_platform("steam", titles=["730"], interval=5)
+        schedule = Schedule([steam], 30, once=True, clock=clock)
+
+        assert schedule.pop_due() == [steam]
+        assert schedule.next_check() is None
+
+
+def test_run_checks_only_the_given_instances(
+    client: FakeClient, make_platform: MakePlatform, database: Database
+) -> None:
+    client.serve(f"{STEAMCMD}/730", "steam_730.json")
+    first = make_platform("steam", name="first", titles=["730"])
+    second = make_platform("steam", name="second", titles=["730"])
+
+    summary = make_runner([first, second], database, None).run([second])
+
+    assert summary.new == 1
+    assert database.get_title("steam", "first", "730") is None
+    assert database.get_title("steam", "second", "730") is not None

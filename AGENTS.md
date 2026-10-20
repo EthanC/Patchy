@@ -4,7 +4,7 @@ Guidance for AI agents and contributors working on Patchy.
 
 ## What Patchy does
 
-Patchy checks the current version of configured game titles on several platforms (Steam, Battle.net, PlayStation 5 "prospero", PlayStation 4 "orbis"), stores the last seen version in SQLite, and posts a Discord Components V2 message when a version changes. It runs once and exits, or loops every `interval` minutes.
+Patchy checks the current version of configured game titles on several platforms (Steam, Battle.net, PlayStation 5 "prospero", PlayStation 4 "orbis"), stores the last seen version in SQLite, and posts a Discord Components V2 message when a version changes. It runs once and exits, or checks each platform instance every `interval` minutes (its own, or the top-level default).
 
 ## Commands
 
@@ -30,7 +30,7 @@ src/patchy/
   errors.py        PatchyError hierarchy. Every expected failure is one of these.
   logs.py          Loguru sinks: stderr and optional loguru-discord forwarding.
   notifier.py      Notifier protocol, DiscordNotifier (discord-clyde, Components V2), and discord_notifier() for an instance's webhook.
-  runner.py        build_platforms() and Runner: per-title check loop, persistence, and error containment.
+  runner.py        build_platforms(), Schedule (when each instance is next due), and Runner: per-title check loop, persistence, and error containment.
   platforms/
     __init__.py    @register decorator and registry(), which auto-imports every module here.
     base.py        Platform ABC, Release, Update, UpstreamModel, OptionalText.
@@ -51,6 +51,7 @@ Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` 
 - State is per instance. `TitleRecord` is keyed by `(platform, instance, title_id)` and `UpdateRecord` stores the instance, so the same title in two instances is tracked and reported separately. Renaming an instance makes its titles new again.
 - Notifiers are per instance. `Runner` asks `notifier_for(platform)` (default `discord_notifier`, which uses the instance's `webhook_url`) once per instance; `None` means updates are only logged.
 - `enabled = false` skips that instance only. Instances with no titles are skipped too.
+- Intervals are per instance. `Schedule` checks every instance immediately, then again after its `interval`, falling back to the top-level `interval`; `0` checks it once. The loop runs only the instances that are due and exits when none will be due again. `--once` ignores every interval.
 
 ## How a check works
 
@@ -97,7 +98,7 @@ class Example(Platform[PlatformSettings]):
 ## Adding other features
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
-- Every setting lives in exactly one place. Runtime behaviour (dry run, logging, database path, HTTP, the config path) goes on `EnvironmentSettings`, documented in `.env.example` and the README's variable table. What to watch and where to report it (interval, and per instance: titles, webhook, platform options) goes on `FileSettings` or `PlatformSettings`, documented in `config.example.toml` and the README's option table. Never add a setting to both.
+- Every setting lives in exactly one place. Runtime behaviour (dry run, logging, database path, HTTP, the config path) goes on `EnvironmentSettings`, documented in `.env.example` and the README's variable table. What to watch and where to report it (the default interval, and per instance: titles, webhook, interval, platform options) goes on `FileSettings` or `PlatformSettings`, documented in `config.example.toml` and the README's option table. Never add a setting to both.
 - Environment variables join the path with single underscores (`log.level` is `PATCHY_LOG_LEVEL`); only the first underscore after a section name splits, so environment settings nest at most one level deep. Unknown `PATCHY_*` variables, and variables for `config.toml` settings, are ignored. `FileSettings.load()` rejects unknown keys and reports environment settings found in `config.toml` with the variable to use instead. Cover new variables in `TestEnvironment.test_every_variable`.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.

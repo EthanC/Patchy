@@ -1,6 +1,7 @@
 """Command-line entry point: ``patchy`` or ``python -m patchy``."""
 
 import argparse
+import math
 import signal
 import sys
 import threading
@@ -19,7 +20,7 @@ from patchy.database import Database
 from patchy.errors import ConfigError, PatchyError
 from patchy.logs import configure_logging
 from patchy.platforms import Platform, registry
-from patchy.runner import Runner, build_platforms
+from patchy.runner import Runner, Schedule, build_platforms
 
 EXIT_OK: int = 0
 EXIT_FAILURE: int = 1
@@ -52,7 +53,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     run.add_argument(
         "--once",
         action="store_true",
-        help="check once and exit, ignoring the configured interval",
+        help="check once and exit, ignoring every configured interval",
     )
     run.add_argument(
         "--dry-run",
@@ -124,14 +125,12 @@ def _run(
     once: bool,
     dry_run: bool,
 ) -> None:
-    """Check titles once, or repeatedly when an interval is configured."""
+    """Check each instance once, or repeatedly at its configured interval."""
     logger.info("Patchy")
     logger.info(PROJECT_URL)
 
     if dry_run:
         logger.warning("Dry run, versions will not be saved and nothing will be sent")
-
-    interval: int = 0 if once else settings.interval
 
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, _request_stop)
@@ -150,16 +149,23 @@ def _run(
             return
 
         runner: Runner = Runner(platforms, database, dry_run=dry_run)
+        schedule: Schedule = Schedule(platforms, settings.interval, once=once)
 
         while not _stop.is_set():
-            logger.success(f"Finished checking titles: {runner.run()}")
+            if due := schedule.pop_due():
+                logger.success(f"Finished checking titles: {runner.run(due)}")
 
-            if interval == 0:
+            if (upcoming := schedule.next_check()) is None:
                 break
 
-            logger.info(f"Next check in {interval} minutes")
+            seconds, following = upcoming
 
-            _stop.wait(interval * 60)
+            logger.info(
+                f"Next check of {', '.join(p.label for p in following)} in "
+                f"{math.ceil(seconds / 60)} minutes"
+            )
+
+            _stop.wait(seconds)
 
 
 def _request_stop(signum: int, _frame: FrameType | None) -> None:
