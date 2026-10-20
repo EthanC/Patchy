@@ -18,7 +18,6 @@ from patchy.database import Database
 from patchy.errors import ConfigError, PatchyError
 from patchy.logs import configure_logging
 from patchy.migrate import import_renovate_history
-from patchy.notifier import DiscordNotifier, Notifier
 from patchy.platforms import Platform, registry
 from patchy.runner import Runner, build_platforms
 
@@ -65,6 +64,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "import-history", help="import versions from a Renovate history.json file"
     )
     history.add_argument("path", type=Path, help="path to history.json")
+    history.add_argument(
+        "--instance",
+        help="platform instance name to import into (default: each unnamed instance)",
+    )
 
     commands.add_parser("platforms", help="list available platforms")
 
@@ -95,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         match args.command:
             case "import-history":
                 with _open_database(environment) as database:
-                    import_renovate_history(args.path, database)
+                    import_renovate_history(args.path, database, instance=args.instance)
             case _:
                 _run(
                     environment,
@@ -142,13 +145,6 @@ def _run(
     if dry_run:
         logger.warning("Dry run, versions will not be saved and nothing will be sent")
 
-    notifier: Notifier | None = None
-
-    if settings.discord.webhook_url is not None:
-        notifier = DiscordNotifier(str(settings.discord.webhook_url))
-    else:
-        logger.warning("No Discord webhook is configured, updates will only be logged")
-
     interval: int = 0 if once else settings.interval
 
     for signum in (signal.SIGINT, signal.SIGTERM):
@@ -167,7 +163,7 @@ def _run(
 
             return
 
-        runner: Runner = Runner(platforms, database, notifier, dry_run=dry_run)
+        runner: Runner = Runner(platforms, database, dry_run=dry_run)
 
         while not _stop.is_set():
             logger.success(f"Finished checking titles: {runner.run()}")

@@ -79,7 +79,6 @@ class TestEnvironment:
         file = FileSettings.load(write(tmp_path, "interval = 5\n"))
 
         assert file.interval == 5
-        assert file.discord.webhook_url is None
         assert file.platforms == {}
 
     def test_invalid_values_name_the_variable(
@@ -96,7 +95,6 @@ class TestFile:
         settings = FileSettings.load(tmp_path / "absent.toml")
 
         assert settings.interval == 0
-        assert settings.discord.webhook_url is None
         assert settings.platforms == {}
 
     def test_reads_every_option(self, tmp_path: Path) -> None:
@@ -106,19 +104,30 @@ class TestFile:
                 """
                 interval = 15
 
-                [discord]
-                webhook_url = "https://discord.com/api/webhooks/1/toml"
-
-                [platforms.Steam]
+                [[platforms.Steam]]
+                name = "friends"
                 titles = ["730"]
+                webhook_url = "https://discord.com/api/webhooks/1/a"
+
+                [[platforms.Steam]]
+                name = "beta"
+                enabled = false
+                titles = ["730", "440"]
                 branch = "beta"
+                webhook_url = "https://discord.com/api/webhooks/2/b"
+
+                [platforms.battlenet]
+                titles = ["wow"]
                 """,
             )
         )
 
         assert settings.interval == 15
-        assert str(settings.discord.webhook_url).endswith("/1/toml")
-        assert settings.platforms == {"steam": {"titles": ["730"], "branch": "beta"}}
+        assert [i["name"] for i in settings.platforms["steam"]] == ["friends", "beta"]
+        assert settings.platforms["steam"][1]["branch"] == "beta"
+        assert settings.platforms["battlenet"] == [{"titles": ["wow"]}], (
+            "a single table is one instance"
+        )
 
     def test_environment_settings_are_rejected(self, tmp_path: Path) -> None:
         path = write(
@@ -135,13 +144,13 @@ class TestFile:
         assert "http: set with PATCHY_HTTP_* environment variables" in message
 
     def test_unknown_keys_are_rejected(self, tmp_path: Path) -> None:
-        with pytest.raises(ConfigError, match=r"discord\.username"):
-            FileSettings.load(write(tmp_path, '[discord]\nusername = "Patchy"\n'))
+        with pytest.raises(ConfigError, match="discord"):
+            FileSettings.load(write(tmp_path, '[discord]\nwebhook_url = "x"\n'))
 
     def test_invalid_values_are_reported_together(self, tmp_path: Path) -> None:
         path = write(
             tmp_path,
-            'interval = -1\nlog = 1\n[discord]\nwebhook_url = "nope"\n',
+            "interval = -1\nlog = 1\nplatforms = 1\n",
         )
 
         with pytest.raises(ConfigError) as info:
@@ -149,7 +158,7 @@ class TestFile:
 
         message = str(info.value)
         assert "interval" in message
-        assert "discord.webhook_url" in message
+        assert "platforms" in message
         assert "log: set with PATCHY_LOG_* environment variables" in message
 
     def test_malformed_toml(self, tmp_path: Path) -> None:

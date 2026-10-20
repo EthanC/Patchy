@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import Any, Self, override
-lazy from collections.abc import Mapping
+lazy from collections.abc import Callable, Mapping, Sequence
 
 from loguru import logger
 
@@ -15,6 +15,7 @@ from patchy.errors import (
     PatchyError,
     StorageError,
 )
+from patchy.notifier import discord_notifier
 from patchy.platforms import Platform, Update, registry
 lazy from patchy.client import HttpClient
 lazy from patchy.notifier import Notifier
@@ -60,24 +61,25 @@ class Summary:
 
 
 def build_platforms(
-    configured: Mapping[str, Mapping[str, Any]], client: HttpClient
+    configured: Mapping[str, Sequence[Mapping[str, Any]]], client: HttpClient
 ) -> list[Platform[Any]]:
-    """Instantiate every enabled platform that has titles configured.
+    """Instantiate every enabled platform instance that has titles configured.
 
     Args:
-        configured: Raw platform settings keyed by platform key.
-        client: HTTP client shared by all platforms.
+        configured: Raw instance settings, keyed by platform key.
+        client: HTTP client shared by all instances.
 
     Returns:
-        The platforms to check.
+        The platform instances to check.
 
     Raises:
-        ConfigError: A platform key is unknown or its settings are invalid.
+        ConfigError: A platform key is unknown, instance names are not unique, or
+            an instance's settings are invalid.
     """
     available: dict[str, type[Platform[Any]]] = registry()
     platforms: list[Platform[Any]] = []
 
-    for key, raw in configured.items():
+    for key, instances in configured.items():
         if (cls := available.get(key)) is None:
             msg: str = (
                 f"Unknown platform {key!r}; available platforms are "
@@ -86,14 +88,35 @@ def build_platforms(
 
             raise ConfigError(msg)
 
-        platform: Platform[Any] = cls.from_config(raw, client)
+        names: set[str] = set()
 
-        if not platform.settings.enabled:
-            logger.debug(f"Skipping {platform.name}, it is disabled")
-        elif not platform.titles:
-            logger.debug(f"Skipping {platform.name}, no titles are configured")
-        else:
-            platforms.append(platform)
+        for index, raw in enumerate(instances):
+            platform: Platform[Any] = cls.from_config(
+                raw, client, location=f"platforms.{key}[{index}]"
+            )
+
+            if platform.instance in names:
+                msg = (
+                    f"platforms.{key}[{index}]: another {platform.name} instance is "
+                    f"named {platform.instance!r}; give each instance a unique name"
+                )
+
+                raise ConfigError(msg)
+
+            names.add(platform.instance)
+
+            if not platform.settings.enabled:
+                logger.debug(f"Skipping {platform.label}, it is disabled")
+            elif not platform.titles:
+                logger.debug(f"Skipping {platform.label}, no titles are configured")
+            else:
+                if platform.settings.webhook_url is None:
+                    logger.warning(
+                        f"{platform.label} has no webhook_url, its updates will "
+                        "only be logged"
+                    )
+
+                platforms.append(platform)
 
     return platforms
 
@@ -105,25 +128,28 @@ class Runner:
         self: Self,
         platforms: list[Platform[Any]],
         database: Database,
-        notifier: Notifier | None,
         *,
+        notifier_for: Callable[[Platform[Any]], Notifier | None] = discord_notifier,
         dry_run: bool = False,
     ) -> None:
         """Create a runner.
 
         Args:
-            platforms: Platforms to check.
+            platforms: Platform instances to check.
             database: Where versions are stored.
-            notifier: Where updates are announced, or ``None`` to only log them.
+            notifier_for: Returns where an instance's updates are announced, or
+                ``None`` to only log them.
             dry_run: Check titles without saving versions or sending notifications.
         """
         self.platforms: list[Platform[Any]] = platforms
         self.database: Database = database
-        self.notifier: Notifier | None = notifier
+        self.notifiers: dict[Platform[Any], Notifier | None] = {
+            platform: notifier_for(platform) for platform in platforms
+        }
         self.dry_run: bool = dry_run
 
     def run(self: Self) -> Summary:
-        """Check every title on every platform once.
+        """Check every title in every platform instance once.
 
         A failure checking one title is logged and does not stop the others.
 
@@ -149,16 +175,16 @@ class Runner:
             raise
         except FetchError as e:
             # Upstream outages are routine, so a traceback adds nothing.
-            logger.warning(f"{platform.name} title {title_id}: {e}")
+            logger.warning(f"{platform.label} title {title_id}: {e}")
         except NotificationError as e:
             logger.opt(exception=e).error(
-                f"{platform.name} title {title_id}: {e}; will retry next run"
+                f"{platform.label} title {title_id}: {e}; will retry next run"
             )
         except PatchyError as e:
-            logger.opt(exception=e).error(f"{platform.name} title {title_id}: {e}")
+            logger.opt(exception=e).error(f"{platform.label} title {title_id}: {e}")
         except Exception as e:  # noqa: BLE001 - one bad title must not stop the run.
             logger.opt(exception=e).error(
-                f"Unexpected error checking {platform.name} title {title_id}"
+                f"Unexpected error checking {platform.label} title {title_id}"
             )
 
         return Outcome.FAILED
@@ -180,8 +206,10 @@ class Runner:
             PatchyError: The title could not be checked or reported.
         """
         release = platform.fetch(title_id)
-        stored: TitleRecord | None = self.database.get_title(platform.key, title_id)
-        label: str = f"{platform.name} title {release.name}"
+        stored: TitleRecord | None = self.database.get_title(
+            platform.key, platform.instance, title_id
+        )
+        label: str = f"{platform.label} title {release.name}"
 
         if stored is None:
             logger.success(f"Now tracking {label} at version {release.version}")
@@ -189,6 +217,7 @@ class Runner:
             self._save(
                 TitleRecord(
                     platform=platform.key,
+                    instance=platform.instance,
                     title_id=title_id,
                     name=release.name,
                     version=release.version,
@@ -220,8 +249,8 @@ class Runner:
 
             return Outcome.UPDATED
 
-        if self.notifier is not None:
-            self.notifier.send(update)
+        if (notifier := self.notifiers.get(platform)) is not None:
+            notifier.send(update)
 
         stored.version = release.version
         stored.last_updated = stored.last_checked
@@ -230,6 +259,7 @@ class Runner:
             stored,
             UpdateRecord(
                 platform=platform.key,
+                instance=platform.instance,
                 title_id=title_id,
                 name=release.name,
                 previous_version=update.previous_version,

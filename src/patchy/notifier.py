@@ -1,7 +1,7 @@
 """Deliver update notifications."""
 
 from datetime import UTC, datetime
-from typing import Protocol, Self
+from typing import Any, Protocol, Self
 
 import niquests
 from clyde import Markdown, RequestPolicy, Timestamp, Webhook
@@ -21,7 +21,7 @@ from loguru import logger
 lazy from clyde.components.container import ContainerComponent
 
 from patchy.errors import NotificationError
-lazy from patchy.platforms import Update
+lazy from patchy.platforms import Platform, Update
 
 REQUEST_POLICY: RequestPolicy = RequestPolicy(
     connect_timeout=10.0,
@@ -94,6 +94,21 @@ class DiscordNotifier:
         webhook.add_component(build_container(update))
 
         return webhook
+
+
+def discord_notifier(platform: Platform[Any]) -> Notifier | None:
+    """Return a notifier for a platform instance's webhook, if it has one.
+
+    Args:
+        platform: The platform instance.
+
+    Returns:
+        A notifier posting to the instance's ``webhook_url``, or ``None``.
+    """
+    if (url := platform.settings.webhook_url) is None:
+        return None
+
+    return DiscordNotifier(str(url))
 
 
 def build_container(update: Update) -> Container:

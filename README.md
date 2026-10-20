@@ -14,16 +14,37 @@ Patchy reads each setting from exactly one place.
 
 **`config.toml`** holds what to watch and where to report it. Copy [`config.example.toml`](config.example.toml) to `config.toml` and edit it.
 
-| Option                       | Description                                                  |
-| ---------------------------- | ------------------------------------------------------------ |
-| `interval`                   | Minutes between checks. `0` (default) checks once and exits. |
-| `discord.webhook_url`        | Discord Webhook URL to post update notifications to.         |
-| `platforms.<key>.enabled`    | Whether to check the platform. Default `true`.               |
-| `platforms.<key>.titles`     | Title IDs to watch on the platform.                          |
-| `platforms.steam.branch`     | Steam depot branch to track. Default `public`.               |
-| `platforms.battlenet.region` | Battle.net region to track. Default `Americas`.              |
+`interval` sets the minutes between checks. `0` (the default) checks once and exits.
+
+Each `[[platforms.<key>]]` table is one instance of a platform with its own titles and webhook. Repeat a table to watch another set of titles on the same platform, for example two Steam instances posting to different channels.
+
+| Instance option | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| `name`          | Identifies the instance in logs and the database. Defaults to the platform key; required and unique when a platform has more than one instance. |
+| `enabled`       | Whether this instance is checked. Default `true`.                           |
+| `webhook_url`   | Discord Webhook URL for this instance's updates. Omit to only log them.     |
+| `titles`        | Title IDs to watch.                                                         |
+| `branch`        | Steam only. Depot branch to track. Default `public`.                        |
+| `region`        | Battle.net only. Region to track. Default `Americas`.                       |
 
 Platform keys are `steam` (Steam app IDs), `battlenet` (BlizzTrack product codes), `prospero` (PlayStation 5 title IDs), and `orbis` (PlayStation 4 title IDs).
+
+```toml
+interval = 30
+
+[[platforms.steam]]
+name = "favorites"
+webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
+titles = ["730", "440"]
+
+[[platforms.steam]]
+name = "betas"
+webhook_url = "https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY"
+titles = ["730"]
+branch = "beta"
+```
+
+Each instance remembers versions separately, so a title watched by two instances is reported to both webhooks.
 
 **Environment variables** hold runtime settings. Set them directly, or copy [`.env.example`](.env.example) to `.env`.
 
@@ -85,7 +106,9 @@ uv run patchy import-history path/to/history.json
 docker compose run --rm patchy patchy import-history /data/history.json
 ```
 
-Renovate's `STEAM_TITLES`, `BATTLE_TITLES`, `PROSPERO_TITLES`, and `ORBIS_TITLES` become the `titles` lists under `[platforms.steam]`, `[platforms.battlenet]`, `[platforms.prospero]`, and `[platforms.orbis]` in `config.toml`.
+Renovate's `STEAM_TITLES`, `BATTLE_TITLES`, `PROSPERO_TITLES`, and `ORBIS_TITLES` become the `titles` lists under `[[platforms.steam]]`, `[[platforms.battlenet]]`, `[[platforms.prospero]]`, and `[[platforms.orbis]]` in `config.toml`, and `DISCORD_WEBHOOK_URL` becomes each instance's `webhook_url`.
+
+History is imported into each platform's unnamed instance. If your instances have names, pass `--instance <name>` to import into that one instead.
 
 ## Development
 

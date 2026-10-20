@@ -17,7 +17,9 @@ RENOVATE_PLATFORMS: dict[str, str] = {
 }
 
 
-def import_renovate_history(path: Path, database: Database) -> int:
+def import_renovate_history(
+    path: Path, database: Database, *, instance: str | None = None
+) -> int:
     """Seed the database with versions from a Renovate ``history.json`` file.
 
     Titles Patchy already tracks are left untouched, so this is safe to rerun.
@@ -25,6 +27,8 @@ def import_renovate_history(path: Path, database: Database) -> int:
     Args:
         path: Location of ``history.json``.
         database: Database to import into.
+        instance: Platform instance to import into. Defaults to each platform's
+            unnamed instance, whose name is the platform key.
 
     Returns:
         The number of titles imported.
@@ -60,14 +64,19 @@ def import_renovate_history(path: Path, database: Database) -> int:
 
                 continue
 
-            if database.get_title(platform, str(title_id)) is not None:
+            target: str = instance if instance is not None else platform
+
+            if database.get_title(platform, target, str(title_id)) is not None:
                 logger.debug(f"Skipping {platform} title {title_id}, already tracked")
 
                 continue
 
             database.save_title(
                 TitleRecord(
-                    platform=platform, title_id=str(title_id), version=str(version)
+                    platform=platform,
+                    instance=target,
+                    title_id=str(title_id),
+                    version=str(version),
                 )
             )
 

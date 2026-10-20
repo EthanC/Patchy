@@ -1,0 +1,25 @@
+{
+    "data": {
+        "440": {
+            "_change_number": 31234567,
+            "_missing_token": false,
+            "_sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6",
+            "_size": 1234567,
+            "appid": "440",
+            "common": {
+                "name": "Team Fortress 2",
+                "type": "Game",
+                "icon": "e3f595a92552da3d664ad00277fad2107345f743"
+            },
+            "depots": {
+                "branches": {
+                    "public": {
+                        "buildid": "19000123",
+                        "timeupdated": "1760000000"
+                    }
+                }
+            }
+        }
+    },
+    "status": "success"
+}

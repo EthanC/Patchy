@@ -3,8 +3,8 @@
 Runtime settings come from ``PATCHY_*`` environment variables (or a ``.env`` file):
 dry run, logging, the database path, HTTP behaviour, and the ``config.toml`` path.
 
-What to watch and where to report it comes from ``config.toml``: the interval, the
-notification webhook, and every platform's titles and options.
+What to watch and where to report it comes from ``config.toml``: the interval and
+every platform instance, each with its own titles, webhook, and options.
 
 A setting is never read from both. Environment variables for ``config.toml``
 settings, or for options that do not exist, are ignored; environment settings
@@ -49,17 +49,6 @@ class LogSettings(BaseModel):
         return value.upper() if isinstance(value, str) else value
 
 
-class DiscordSettings(BaseModel):
-    """Where update notifications are delivered.
-
-    The webhook's name and avatar are managed in Discord.
-    """
-
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
-
-    webhook_url: HttpUrl | None = None
-
-
 class DatabaseSettings(BaseModel):
     """SQLite persistence."""
 
@@ -78,15 +67,27 @@ class HttpSettings(BaseModel):
 
 
 class PlatformSettings(BaseModel):
-    """Settings shared by every platform.
+    """Settings for one instance of a platform, from a ``[[platforms.<key>]]`` table.
 
-    Platforms needing more options subclass this and set ``Platform.settings_model``.
+    A platform may be configured any number of times, each instance with its own
+    titles, webhook, and options. Platforms needing more options subclass this and
+    set ``Platform.settings_model``.
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
+    name: Annotated[str, Field(min_length=1)] | None = None
+    """Identifies the instance in logs and the database. Defaults to the platform
+    key, so it is required (and must be unique) when a platform has several."""
+
     enabled: bool = True
+    """Whether this instance is checked."""
+
+    webhook_url: HttpUrl | None = None
+    """Discord webhook this instance's updates are posted to. ``None`` only logs."""
+
     titles: list[str] = Field(default_factory=list)
+    """Title identifiers to watch."""
 
     @field_validator("titles")
     @classmethod
@@ -143,18 +144,21 @@ class FileSettings(BaseModel):
     interval: Annotated[int, Field(ge=0)] = 0
     """Minutes between checks. ``0`` checks once and exits."""
 
-    discord: DiscordSettings = Field(default_factory=DiscordSettings)
-
-    platforms: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    """Raw settings per platform key, validated by each platform's own model."""
+    platforms: dict[str, list[dict[str, Any]]] = Field(default_factory=dict)
+    """Raw settings for each instance, keyed by platform key. Each instance is
+    validated by its platform's own model."""
 
     @field_validator("platforms", mode="before")
     @classmethod
-    def _lowercase_platforms(cls, value: object) -> object:
-        if isinstance(value, dict):
-            return {str(key).lower(): item for key, item in value.items()}
+    def _normalize_platforms(cls, value: object) -> object:
+        """Lowercase platform keys and accept a lone table as a single instance."""
+        if not isinstance(value, dict):
+            return value
 
-        return value
+        return {
+            str(key).lower(): [item] if isinstance(item, dict) else item
+            for key, item in value.items()
+        }
 
     @classmethod
     def load(cls, path: Path) -> Self:

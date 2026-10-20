@@ -24,14 +24,14 @@ uv run patchy --help       # run the CLI
 ```
 src/patchy/
   __main__.py      CLI (argparse): run, import-history, platforms. Signal handling and the interval loop.
-  config.py        EnvironmentSettings (PATCHY_* env vars) and FileSettings (config.toml); no setting is in both. PlatformSettings base.
+  config.py        EnvironmentSettings (PATCHY_* env vars) and FileSettings (config.toml); no setting is in both. PlatformSettings: one platform instance.
   client.py        HttpClient: niquests session with retries; raises FetchError / PayloadError only.
   database.py      SQLModel tables (TitleRecord, UpdateRecord) and the Database wrapper.
   errors.py        PatchyError hierarchy. Every expected failure is one of these.
   logs.py          Loguru sinks: stderr and optional loguru-discord forwarding.
   migrate.py       Import of Renovate's history.json.
-  notifier.py      Notifier protocol and DiscordNotifier (discord-clyde, Components V2).
-  runner.py        Runner: per-title check loop, persistence, and error containment.
+  notifier.py      Notifier protocol, DiscordNotifier (discord-clyde, Components V2), and discord_notifier() for an instance's webhook.
+  runner.py        build_platforms() and Runner: per-title check loop, persistence, and error containment.
   platforms/
     __init__.py    @register decorator and registry(), which auto-imports every module here.
     base.py        Platform ABC, Release, Update, UpstreamModel, OptionalText.
@@ -43,12 +43,22 @@ tests/
   fixtures/        Sample upstream responses, one file per endpoint.
 ```
 
+## Platform instances
+
+Each `[[platforms.<key>]]` table in `config.toml` is one instance: a `Platform` object with its own `PlatformSettings` (`name`, `enabled`, `webhook_url`, `titles`, plus platform options such as Steam's `branch`). A platform can have any number of instances.
+
+- `Platform.instance` is the instance's `name`, defaulting to the platform `key`. `build_platforms()` rejects two instances of one platform with the same name, so a platform with several instances needs names.
+- `Platform.label` is what logs show: the platform name, plus the instance in parentheses when it is named.
+- State is per instance. `TitleRecord` is keyed by `(platform, instance, title_id)` and `UpdateRecord` stores the instance, so the same title in two instances is tracked and reported separately. Renaming an instance makes its titles new again.
+- Notifiers are per instance. `Runner` asks `notifier_for(platform)` (default `discord_notifier`, which uses the instance's `webhook_url`) once per instance; `None` means updates are only logged.
+- `enabled = false` skips that instance only. Instances with no titles are skipped too.
+
 ## How a check works
 
-1. `build_platforms()` instantiates each configured platform. `Platform.__init__` normalizes title IDs with `normalize_title_id()`; invalid IDs are logged and dropped.
+1. `build_platforms()` validates and instantiates each enabled instance. `Platform.__init__` normalizes title IDs with `normalize_title_id()`; invalid IDs are logged and dropped.
 2. `Runner.check()` calls `platform.fetch(title_id)`, which returns a `Release`.
 3. If the title is unknown, it is stored without notifying. If the version is unchanged, only `last_checked` is updated.
-4. If the version changed, `platform.enrich(release)` adds notification-only data (artwork, build names), the notifier sends the message, and only then is the new version stored together with an `UpdateRecord`. A failed notification therefore retries on the next run.
+4. If the version changed, `platform.enrich(release)` adds notification-only data (artwork, build names), the instance's notifier sends the message, and only then is the new version stored together with an `UpdateRecord`. A failed notification therefore retries on the next run.
 
 ## Error handling rules
 
@@ -62,8 +72,8 @@ tests/
 
 1. Create `src/patchy/platforms/<name>.py`. No other file needs to change for the platform to be discovered.
 2. Describe each upstream response with `UpstreamModel` subclasses (prefixed `_`, private to the module). Use `OptionalText` for optional strings that upstream may send as `""`. Fetch with `self.client.get_model(url, Model)`, which validates the response and raises `PayloadError` on mismatch.
-3. If the platform needs options beyond `titles` and `enabled`, subclass `PlatformSettings` and set `settings_model`.
-4. Subclass `Platform[YourSettings]`, set `key` (lowercase, used in config, env vars, and the database, so never change it once released), `name`, `color`, and `icon_url`, then decorate with `@register`.
+3. If the platform needs options beyond `name`, `enabled`, `webhook_url`, and `titles`, subclass `PlatformSettings` and set `settings_model`. Options apply per instance.
+4. Subclass `Platform[YourSettings]`, set `key` (lowercase, used in `config.toml` and the database, so never change it once released), `name`, `color`, and `icon_url`, then decorate with `@register`.
 5. Implement `fetch()` with the minimum requests needed to read the version. Put extra requests for notifications in `enrich()`. Override `normalize_title_id()` to reject or canonicalize IDs.
 6. Add fixtures under `tests/fixtures/` and tests in `tests/test_platforms.py` using `client.serve(url, fixture)`. Update `test_registry_discovers_every_platform`.
 7. Document the platform in `config.example.toml` and the README table.
@@ -86,7 +96,7 @@ class Example(Platform[PlatformSettings]):
 ## Adding other features
 
 - New notification targets implement the `Notifier` protocol in `notifier.py` and are wired up in `__main__._run()`.
-- Every setting lives in exactly one place. Runtime behaviour (dry run, logging, database path, HTTP, the config path) goes on `EnvironmentSettings`, documented in `.env.example` and the README's variable table. What to watch and where to report it (interval, notification webhook, platforms) goes on `FileSettings`, documented in `config.example.toml` and the README's option table. Never add a setting to both.
+- Every setting lives in exactly one place. Runtime behaviour (dry run, logging, database path, HTTP, the config path) goes on `EnvironmentSettings`, documented in `.env.example` and the README's variable table. What to watch and where to report it (interval, and per instance: titles, webhook, platform options) goes on `FileSettings` or `PlatformSettings`, documented in `config.example.toml` and the README's option table. Never add a setting to both.
 - Environment variables join the path with single underscores (`log.level` is `PATCHY_LOG_LEVEL`); only the first underscore after a section name splits, so environment settings nest at most one level deep. Unknown `PATCHY_*` variables are ignored so removing an option never breaks a deployment. `FileSettings.load()` rejects unknown keys and reports environment settings found in `config.toml` with the variable to use instead. Cover new variables in `TestEnvironment.test_every_variable`.
 - New tables are SQLModel classes in `database.py`. `create_all()` creates missing tables but never alters existing ones, so changing a column needs a migration step.
 - New commands are argparse subcommands in `__main__.py`.

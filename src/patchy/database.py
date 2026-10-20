@@ -20,11 +20,16 @@ def utcnow() -> datetime:
 
 
 class TitleRecord(SQLModel, table=True):
-    """The most recently seen version of a title on a platform."""
+    """The most recently seen version of a title in one platform instance.
+
+    Versions are tracked per instance so that each instance reports every update to
+    its own webhook, even when several instances watch the same title.
+    """
 
     __tablename__: str = "titles"
 
     platform: str = Field(primary_key=True)
+    instance: str = Field(primary_key=True)
     title_id: str = Field(primary_key=True)
     name: str | None = None
     version: str
@@ -40,6 +45,7 @@ class UpdateRecord(SQLModel, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     platform: str = Field(index=True)
+    instance: str = Field(index=True)
     title_id: str = Field(index=True)
     name: str
     previous_version: str
@@ -107,18 +113,21 @@ class Database:
 
             raise StorageError(msg) from e
 
-    def get_title(self: Self, platform: str, title_id: str) -> TitleRecord | None:
-        """Return the stored state of a title, if Patchy has seen it before.
+    def get_title(
+        self: Self, platform: str, instance: str, title_id: str
+    ) -> TitleRecord | None:
+        """Return the stored state of a title, if this instance has seen it before.
 
         Args:
             platform: The platform key.
+            instance: The platform instance's name.
             title_id: The title's identifier on that platform.
 
         Returns:
             The stored record, or ``None`` when the title is untracked.
         """
         with self.session() as session:
-            return session.get(TitleRecord, (platform, title_id))
+            return session.get(TitleRecord, (platform, instance, title_id))
 
     def save_title(self: Self, record: TitleRecord) -> None:
         """Insert or replace a title's stored state.

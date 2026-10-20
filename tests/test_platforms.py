@@ -170,7 +170,7 @@ class TestPlayStation:
 def test_invalid_platform_settings_raise_config_error(
     make_platform: MakePlatform,
 ) -> None:
-    with pytest.raises(ConfigError, match="Invalid settings for platform steam"):
+    with pytest.raises(ConfigError, match="Invalid settings in steam"):
         make_platform("steam", titles=["730"], bogus=True)
 
 

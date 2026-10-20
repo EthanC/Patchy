@@ -110,13 +110,13 @@ class Platform[S: PlatformSettings](ABC):
     """Platform logo shown alongside notifications."""
 
     settings_model: ClassVar[type[PlatformSettings]] = PlatformSettings
-    """Model used to validate this platform's ``[platforms.<key>]`` table."""
+    """Model used to validate each ``[[platforms.<key>]]`` instance table."""
 
     def __init__(self: Self, settings: S, client: HttpClient) -> None:
         """Create a platform instance.
 
         Args:
-            settings: This platform's validated settings.
+            settings: This instance's validated settings.
             client: HTTP client to use for all upstream requests.
         """
         self.settings: S = settings
@@ -128,20 +128,36 @@ class Platform[S: PlatformSettings](ABC):
             try:
                 normalized: str = self.normalize_title_id(title_id)
             except ConfigError as e:
-                logger.error(f"Skipping {self.name} title {title_id!r}: {e}")
+                logger.error(f"Skipping {self.label} title {title_id!r}: {e}")
 
                 continue
 
             if normalized not in self.titles:
                 self.titles.append(normalized)
 
+    @property
+    def instance(self: Self) -> str:
+        """Name of this instance, unique within its platform."""
+        return self.settings.name if self.settings.name is not None else self.key
+
+    @property
+    def label(self: Self) -> str:
+        """How this instance is referred to in logs."""
+        if self.instance == self.key:
+            return self.name
+
+        return f"{self.name} ({self.instance})"
+
     @classmethod
-    def from_config(cls, raw: Mapping[str, Any], client: HttpClient) -> Self:
+    def from_config(
+        cls, raw: Mapping[str, Any], client: HttpClient, *, location: str | None = None
+    ) -> Self:
         """Validate raw configuration and create a platform instance.
 
         Args:
-            raw: This platform's table from the configuration, before validation.
+            raw: One instance table from the configuration, before validation.
             client: HTTP client to use for all upstream requests.
+            location: Where the table is in ``config.toml``, for error messages.
 
         Returns:
             The platform instance.
@@ -156,7 +172,7 @@ class Platform[S: PlatformSettings](ABC):
                 f"{'.'.join(str(p) for p in err['loc'])}: {err['msg']}"
                 for err in e.errors()
             )
-            msg: str = f"Invalid settings for platform {cls.key}: {problems}"
+            msg: str = f"Invalid settings in {location or cls.key}: {problems}"
 
             raise ConfigError(msg) from e
 

@@ -7,33 +7,53 @@
 # Minutes between checks. 0 checks once and exits, for use with cron.
 interval = 0
 
-[discord]
-# Where update notifications are posted.
-webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
+# Each [[platforms.<key>]] table is one instance of that platform. Repeat a
+# table to watch another set of titles on the same platform with its own
+# webhook and options. Run `patchy platforms` to list every platform key.
+#
+# Every instance accepts:
+#   name         Identifies the instance in logs and the database. Defaults to
+#                the platform key; required and unique when a platform has
+#                more than one instance. Don't rename it later, or its titles
+#                are treated as new.
+#   enabled      Whether this instance is checked. Default true.
+#   webhook_url  Discord webhook this instance's updates are posted to. Omit
+#                to only log updates.
+#   titles       Title IDs to watch.
 
-# Every platform accepts `enabled` (default true) and `titles` (a list of IDs).
-# Run `patchy platforms` to list every available platform.
-
-[platforms.steam]
-enabled = true
 # Steam app IDs, from store.steampowered.com/app/<id> or steamdb.info.
-titles = ["730"]
-# Depot branch whose build ID is tracked.
+[[platforms.steam]]
+name = "favorites"
+enabled = true
+webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
+titles = ["730", "440"]
+# Depot branch whose build ID is tracked. Default "public".
 branch = "public"
 
-[platforms.battlenet]
+[[platforms.steam]]
+name = "betas"
 enabled = true
+webhook_url = "https://discord.com/api/webhooks/YYYYYYYY/YYYYYYYY"
+titles = ["730"]
+branch = "beta"
+
 # BlizzTrack product codes, from blizztrack.com.
+[[platforms.battlenet]]
+enabled = true
+webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
 titles = ["wow"]
 # Region whose version is tracked. Falls back to the first region listed.
+# Default "Americas".
 region = "Americas"
 
-[platforms.prospero]
-enabled = true
 # PlayStation 5 title IDs, from prosperopatches.com.
+[[platforms.prospero]]
+enabled = true
+webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
 titles = ["PPSA01284"]
 
-[platforms.orbis]
-enabled = true
 # PlayStation 4 title IDs, from orbispatches.com.
+[[platforms.orbis]]
+enabled = true
+webhook_url = "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
 titles = ["CUSA00419"]
