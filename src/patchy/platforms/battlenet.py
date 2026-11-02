@@ -180,7 +180,7 @@ class Battlenet(Platform[BattlenetSettings]):
                     previous.build_config if previous is not None else None,
                 )
             except PatchyError as e:
-                logger.opt(exception=e).warning(
+                logger.opt(exception=e).info(
                     f"Failed to fetch build names for Battle.net title {release.name}"
                 )
 
