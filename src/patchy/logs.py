@@ -26,11 +26,7 @@ def configure_logging(settings: LogSettings) -> None:
         return
 
     logger.add(
-        DiscordSink(
-            str(settings.discord_webhook_url),
-            rich=True,
-            intercept=True,
-        ),
+        DiscordSink(str(settings.discord_webhook_url), intercept=True),
         level=settings.discord_level,
         backtrace=False,
         diagnose=False,
