@@ -164,7 +164,7 @@ class Battlenet(Platform[BattlenetSettings]):
         try:
             icon_url, image_url = self._artwork(release.title_id)
         except PatchyError as e:
-            logger.opt(exception=e).warning(
+            logger.opt(exception=e).info(
                 f"Failed to fetch artwork for Battle.net title {release.name}"
             )
 
