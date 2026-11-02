@@ -12,9 +12,9 @@ dependencies = [
     "loguru>=0.7.3",
     "loguru-discord>=2.2.0",
     "niquests>=3.21.2",
-    "pydantic>=2.14.1",
-    "pydantic-settings>=2.16.1",
-    "sqlalchemy>=2.1.5",
+    "pydantic>=2.14.2",
+    "pydantic-settings>=2.16.2",
+    "sqlalchemy>=2.1.6",
     "sqlmodel>=0.0.48",
 ]
 
@@ -25,14 +25,14 @@ Repository = "https://github.com/EthanC/Patchy"
 patchy = "patchy.__main__:main"
 
 [build-system]
-requires = ["uv_build>=0.13.4,<0.14"]
+requires = ["uv_build>=0.13.6,<0.14"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
-    "ruff>=0.17.1",
-    "ty>=0.0.90",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+    "ty>=0.0.95",
 ]
 
 [tool.ruff]
