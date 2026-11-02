@@ -86,7 +86,7 @@ def test_layout() -> None:
     assert '"description":"Counter-Strike 2 artwork"' in text
 
 
-def test_title_ids_are_code_except_on_steam() -> None:
+def test_title_ids_are_code() -> None:
     battlenet = make_update()
     battlenet = replace(
         battlenet,
@@ -97,7 +97,7 @@ def test_title_ids_are_code_except_on_steam() -> None:
     steam_text = msgspec.json.encode(build_container(make_update())).decode()
     battlenet_text = msgspec.json.encode(build_container(battlenet)).decode()
 
-    assert "-# Steam · 730" in steam_text
+    assert "-# Steam · `730`" in steam_text
     assert "-# Battle.net · `WOW` · Americas" in battlenet_text
 
 

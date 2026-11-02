@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 from typing import ClassVar, Self, override
 
+from clyde import Markdown
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
@@ -13,6 +14,7 @@ from patchy.platforms.base import OptionalText, Platform, Release, UpstreamModel
 
 API_URL: str = "https://api.steamcmd.net/v1/info"
 CDN_URL: str = "https://cdn.cloudflare.steamstatic.com"
+STEAMDB_URL: str = "https://steamdb.info"
 
 MAX_LISTED_DEPOTS: int = 8
 """Changed depots named in a notification before the rest are summarized."""
@@ -101,7 +103,7 @@ class _Depots(UpstreamModel):
 class _DepotSnapshot(BaseModel):
     """A depot's manifest on the tracked branch, stored between checks."""
 
-    name: str
+    name: str | None = None
     gid: str
     size: int | None = None
 
@@ -129,7 +131,6 @@ class Steam(Platform[SteamSettings]):
     key: ClassVar[str] = "steam"
     name: ClassVar[str] = "Steam"
     source: ClassVar[str] = "SteamDB"
-    title_id_as_code: ClassVar[bool] = False
     color: ClassVar[int] = 0x1B2838
     icon_url: ClassVar[str | None] = "https://i.imgur.com/oYkhH6s.png"
     settings_model: ClassVar[type[PlatformSettings]] = SteamSettings
@@ -173,7 +174,7 @@ class Steam(Platform[SteamSettings]):
         state: _State = _State(
             depots={
                 depot_id: _DepotSnapshot(
-                    name=depot.label or f"Depot {depot_id}",
+                    name=depot.label,
                     gid=manifest.gid,
                     size=manifest.size,
                 )
@@ -187,7 +188,7 @@ class Steam(Platform[SteamSettings]):
             title_id=title_id,
             name=app.common.name,
             version=branch.buildid,
-            url=f"https://steamdb.info/app/{title_id}/patchnotes/",
+            url=f"{STEAMDB_URL}/app/{title_id}/patchnotes/",
             icon_url=(
                 f"{CDN_URL}/steamcommunity/public/images/apps/{title_id}/{app.common.icon}.jpg"
                 if app.common.icon is not None
@@ -235,8 +236,10 @@ def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None
     changes: list[str] = []
 
     for depot_id, depot in current.depots.items():
+        name: str = depot_name(depot_id, depot)
+
         if (old := previous.depots.get(depot_id)) is None:
-            changes.append(f"{depot.name} added")
+            changes.append(f"{name} added")
         elif old.gid != depot.gid:
             growth: int = (
                 depot.size - old.size
@@ -244,13 +247,13 @@ def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None
                 else 0
             )
             changes.append(
-                f"{depot.name} {format_size(growth, signed=True)}"
+                f"{name} {format_size(growth, signed=True)}"
                 if growth != 0
-                else f"{depot.name} changed"
+                else f"{name} changed"
             )
 
     changes.extend(
-        f"{depot.name} removed"
+        f"{depot_name(depot_id, depot)} removed"
         for depot_id, depot in previous.depots.items()
         if depot_id not in current.depots
     )
@@ -263,6 +266,26 @@ def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None
         changes = [*changes[:MAX_LISTED_DEPOTS], f"{hidden} more"]
 
     return tuple(changes)
+
+
+def depot_name(depot_id: str, depot: _DepotSnapshot) -> str:
+    """Name a depot for a notification, by its ID when it has no name.
+
+    Args:
+        depot_id: The depot's ID.
+        depot: The depot's stored manifest.
+
+    Returns:
+        The depot's name, or its ID as code linking to the depot on SteamDB, such
+        as ``Depot [`1938091`](https://steamdb.info/depot/1938091/)``.
+    """
+    # State stored before unnamed depots were saved without a name holds this.
+    if depot.name is None or depot.name == f"Depot {depot_id}":
+        return "Depot " + Markdown.masked_link(
+            Markdown.inline_code(depot_id), f"{STEAMDB_URL}/depot/{depot_id}/"
+        )
+
+    return depot.name
 
 
 def format_size(size: int, *, signed: bool = False) -> str:

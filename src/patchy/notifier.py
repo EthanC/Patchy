@@ -129,12 +129,9 @@ def build_container(update: Update) -> Container:
     release = update.release
     now: datetime = datetime.now(UTC)
 
-    title_id: str = update.platform.display_title_id(release.title_id)
     subtitle: list[str] = [
         update.platform.name,
-        Markdown.inline_code(title_id)
-        if update.platform.title_id_as_code
-        else title_id,
+        Markdown.inline_code(update.platform.display_title_id(release.title_id)),
     ]
 
     if release.region is not None:

@@ -133,9 +133,6 @@ class Platform[S: PlatformSettings](ABC):
     """Serve artwork through the wsrv.nl image proxy, for hosts whose images Discord
     may not render directly, such as ones sent without a content type."""
 
-    title_id_as_code: ClassVar[bool] = True
-    """Show title IDs as inline code in notifications, as they are usually codes."""
-
     settings_model: ClassVar[type[PlatformSettings]] = PlatformSettings
     """Model used to validate each ``[[platforms.<key>]]`` instance table."""
 
