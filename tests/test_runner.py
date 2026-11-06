@@ -83,7 +83,8 @@ def test_state_is_stored_and_compared_on_update(
     assert runner.check(steam, "730") is Outcome.UPDATED
 
     [update] = notifier.sent
-    assert update.release.details["Depots"][:2] == ("Windows added", "Linux changed")
+    assert update.release.details["Depots"][0] == "Windows added"
+    assert "Linux changed" in update.release.details["Depots"]
     stored = database.get_title("steam", "steam", "730")
     assert stored is not None
     assert stored.state == update.release.state

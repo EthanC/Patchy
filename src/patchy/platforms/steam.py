@@ -231,15 +231,17 @@ def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None
     Returns:
         One entry per depot, such as ``Windows +120.4 MB``, ``Linux added``, or
         ``Mac changed``, or ``None`` when no depot changed. ``changed`` means the
-        size is the same or unknown.
+        size is the same or unknown. Entries are ordered from the largest change
+        to the smallest: the size added or removed, or the change in size.
     """
-    changes: list[str] = []
+    # Each change with its size in bytes, so the largest can be listed first.
+    changes: list[tuple[int, str]] = []
 
     for depot_id, depot in current.depots.items():
         name: str = depot_name(depot_id, depot)
 
         if (old := previous.depots.get(depot_id)) is None:
-            changes.append(f"{name} added")
+            changes.append((depot.size or 0, f"{name} added"))
         elif old.gid != depot.gid:
             growth: int = (
                 depot.size - old.size
@@ -247,13 +249,16 @@ def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None
                 else 0
             )
             changes.append(
-                f"{name} {format_size(growth, signed=True)}"
-                if growth != 0
-                else f"{name} changed"
+                (
+                    abs(growth),
+                    f"{name} {format_size(growth, signed=True)}"
+                    if growth != 0
+                    else f"{name} changed",
+                )
             )
 
     changes.extend(
-        f"{depot_name(depot_id, depot)} removed"
+        (depot.size or 0, f"{depot_name(depot_id, depot)} removed")
         for depot_id, depot in previous.depots.items()
         if depot_id not in current.depots
     )
@@ -261,11 +266,16 @@ def describe_depots(previous: _State, current: _State) -> tuple[str, ...] | None
     if not changes:
         return None
 
-    if len(changes) > MAX_LISTED_DEPOTS:
-        hidden: int = len(changes) - MAX_LISTED_DEPOTS
-        changes = [*changes[:MAX_LISTED_DEPOTS], f"{hidden} more"]
+    # Stable, so changes of equal or unknown size keep their order.
+    entries: list[str] = [
+        text for _, text in sorted(changes, key=lambda c: c[0], reverse=True)
+    ]
 
-    return tuple(changes)
+    if len(entries) > MAX_LISTED_DEPOTS:
+        hidden: int = len(entries) - MAX_LISTED_DEPOTS
+        entries = [*entries[:MAX_LISTED_DEPOTS], f"{hidden} more"]
+
+    return tuple(entries)
 
 
 def depot_name(depot_id: str, depot: _DepotSnapshot) -> str:

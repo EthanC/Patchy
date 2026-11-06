@@ -113,7 +113,11 @@ class TestSteam:
                     "size": 1503238553,
                 },
                 "2347779": {"name": "Windows/Linux (French)", "gid": "2"},
-                "2347790": {"name": "Windows (German)", "gid": "3", "size": 1},
+                "2347790": {
+                    "name": "Windows (German)",
+                    "gid": "3",
+                    "size": 2 * 1024**3,
+                },
                 "2347791": {"gid": "4"},
                 "2347792": {"name": "Depot 2347792", "gid": "5"},
             }
@@ -123,14 +127,14 @@ class TestSteam:
 
         assert release.details == {
             "Depots": (
+                "Windows (German) removed",
                 "Windows +120.4 MB",
                 "Counter-Strike 2 Mac Legacy added",
                 "Windows/Linux (French) changed",
-                "Windows (German) removed",
                 "Depot [`2347791`](https://steamdb.info/depot/2347791/) removed",
                 "Depot [`2347792`](https://steamdb.info/depot/2347792/) removed",
             )
-        }, "unnamed depots, including those stored by name, link their ID"
+        }, "largest first, and unnamed depots link their ID"
 
     def test_enrich_lists_a_limited_number_of_depots(
         self, client: FakeClient, make_platform: MakePlatform
