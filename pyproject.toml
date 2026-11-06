@@ -12,9 +12,9 @@ dependencies = [
     "loguru>=0.7.3",
     "loguru-discord>=2.2.0",
     "niquests>=3.21.2",
-    "pydantic>=2.14.2",
+    "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
-    "sqlalchemy>=2.1.6",
+    "sqlalchemy>=2.1.8",
     "sqlmodel>=0.0.48",
 ]
 
@@ -31,8 +31,8 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.2.0",
-    "ruff>=0.17.3",
-    "ty>=0.0.95",
+    "ruff>=0.17.4",
+    "ty>=0.0.98",
 ]
 
 [tool.ruff]
