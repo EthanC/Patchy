@@ -60,8 +60,9 @@ Steam updates also list the depots that were added, removed, or changed since th
 | `PATCHY_LOG_DISCORD_WEBHOOK_URL` | Discord Webhook URL to forward log events to.                |
 | `PATCHY_LOG_DISCORD_LEVEL`       | Minimum level forwarded to Discord. Default `WARNING`.       |
 | `PATCHY_DATABASE_PATH`           | SQLite database location. Default `patchy.db`.               |
-| `PATCHY_HTTP_TIMEOUT`            | Seconds to wait for upstream services. Default `30`.         |
-| `PATCHY_HTTP_RETRIES`            | Retries for transient upstream failures. Default `3`.        |
+| `PATCHY_HTTP_TIMEOUT`            | Seconds to wait for upstream services to respond. Connecting is limited to 10 seconds. Default `30`. |
+| `PATCHY_HTTP_RETRIES`            | Retries for transient failures after reaching an upstream service, such as timeouts or HTTP 503 and 522. Default `3`. |
+| `PATCHY_HTTP_CONNECT_RETRIES`    | Retries for failures to reach an upstream service, such as DNS errors. The default covers about two minutes. Default `8`. |
 
 Runtime settings placed in `config.toml` are reported as an error. Environment variables for `config.toml` settings, or for options that don't exist, are ignored.
 

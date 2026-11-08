@@ -137,7 +137,9 @@ def _run(
 
     with (
         HttpClient(
-            timeout=environment.http.timeout, retries=environment.http.retries
+            timeout=environment.http.timeout,
+            retries=environment.http.retries,
+            connect_retries=environment.http.connect_retries,
         ) as client,
         _open_database(environment) as database,
     ):

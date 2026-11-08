@@ -5,7 +5,7 @@ lazy from types import TracebackType
 
 import niquests
 from loguru import logger
-from niquests import RetryConfiguration
+from niquests import RetryConfiguration, TimeoutConfiguration
 from pydantic import BaseModel, ValidationError
 
 from patchy import PROJECT_URL
@@ -14,8 +14,22 @@ from patchy.errors import FetchError, PayloadError
 USER_AGENT: str = f"Patchy (+{PROJECT_URL})"
 
 # Upstream services (SteamCMD in particular) frequently answer with transient
-# 5xx responses, so these are retried with backoff before being reported.
-RETRY_STATUSES: frozenset[int] = frozenset({429, 500, 502, 503, 504})
+# 5xx responses, so these are retried with backoff before being reported. 520-524
+# are Cloudflare's equivalents of 502 and 504 for an unreachable or slow origin.
+RETRY_STATUSES: frozenset[int] = frozenset(
+    {429, 500, 502, 503, 504, 520, 521, 522, 523, 524}
+)
+
+# Seconds to wait for a connection. Reaching a healthy host takes well under a
+# second, so this stays short even when responses are allowed to take longer.
+CONNECT_TIMEOUT: float = 10.0
+
+# Retries wait 0, 2, 4, 8, 16, then 30 seconds (plus up to a second of jitter, so
+# instances do not retry in lockstep). Eight connection retries therefore span
+# about two minutes, long enough to ride out a local DNS server restarting.
+BACKOFF_FACTOR: float = 1.0
+BACKOFF_MAX: float = 30.0
+BACKOFF_JITTER: float = 1.0
 
 
 class HttpClient:
@@ -25,18 +39,35 @@ class HttpClient:
     never need to know about niquests exception types.
     """
 
-    def __init__(self: Self, *, timeout: float, retries: int) -> None:
+    def __init__(
+        self: Self, *, timeout: float, retries: int, connect_retries: int
+    ) -> None:
         """Create a client.
 
         Args:
-            timeout: Seconds to wait for a connection or response before giving up.
-            retries: Attempts to make after the first one for transient failures.
+            timeout: Seconds to wait for a response before giving up. Connecting is
+                limited to ``CONNECT_TIMEOUT`` seconds, or ``timeout`` if shorter.
+            retries: Retries for failures after reaching the host: read timeouts,
+                dropped connections, and transient statuses (``RETRY_STATUSES``).
+            connect_retries: Retries for failures to reach the host at all, such as
+                DNS resolution errors and refused connections. The request never
+                reached the server, so these are always safe to retry.
         """
         self._session: niquests.Session = niquests.Session(
-            timeout=timeout,
+            timeout=TimeoutConfiguration(
+                connect=min(CONNECT_TIMEOUT, timeout), read=timeout
+            ),
+            # With no total, each kind of failure has its own budget, so a DNS
+            # outage does not use up the retries meant for a slow upstream.
             retries=RetryConfiguration(
-                total=retries,
-                backoff_factor=1.0,
+                total=None,
+                connect=connect_retries,
+                read=retries,
+                status=retries,
+                other=retries,
+                backoff_factor=BACKOFF_FACTOR,
+                backoff_max=BACKOFF_MAX,
+                backoff_jitter=BACKOFF_JITTER,
                 status_forcelist=RETRY_STATUSES,
                 allowed_methods=frozenset({"GET"}),
                 raise_on_status=False,

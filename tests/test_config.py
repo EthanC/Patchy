@@ -37,6 +37,7 @@ class TestEnvironment:
             "PATCHY_DATABASE_PATH": "elsewhere.db",
             "PATCHY_HTTP_TIMEOUT": "7",
             "PATCHY_HTTP_RETRIES": "1",
+            "PATCHY_HTTP_CONNECT_RETRIES": "2",
         }
 
         for key, value in variables.items():
@@ -49,7 +50,11 @@ class TestEnvironment:
         assert (settings.log.level, settings.log.discord_level) == ("TRACE", "ERROR")
         assert str(settings.log.discord_webhook_url).endswith("/2/log")
         assert settings.database.path == Path("elsewhere.db")
-        assert (settings.http.timeout, settings.http.retries) == (7.0, 1)
+        assert (
+            settings.http.timeout,
+            settings.http.retries,
+            settings.http.connect_retries,
+        ) == (7.0, 1, 2)
 
     @pytest.mark.parametrize("source", ["env", "dotenv"])
     def test_file_owned_and_unknown_variables_are_ignored(

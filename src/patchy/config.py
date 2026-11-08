@@ -63,7 +63,14 @@ class HttpSettings(BaseModel):
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="ignore")
 
     timeout: Annotated[float, Field(gt=0)] = 30.0
+    """Seconds to wait for a response."""
+
     retries: Annotated[int, Field(ge=0)] = 3
+    """Retries for transient failures after reaching the host."""
+
+    connect_retries: Annotated[int, Field(ge=0)] = 8
+    """Retries for failures to reach the host, such as DNS errors. The default
+    retries for about two minutes."""
 
 
 class PlatformSettings(BaseModel):

@@ -33,7 +33,9 @@ def make_update(**release: Any) -> Update:  # noqa: ANN401
     }
 
     return Update(
-        platform=Steam(SteamSettings(), HttpClient(timeout=1, retries=0)),
+        platform=Steam(
+            SteamSettings(), HttpClient(timeout=1, retries=0, connect_retries=0)
+        ),
         release=Release(**(defaults | release)),
         previous_version="20480000",
     )
@@ -90,7 +92,9 @@ def test_title_ids_are_code() -> None:
     battlenet = make_update()
     battlenet = replace(
         battlenet,
-        platform=Battlenet(BattlenetSettings(), HttpClient(timeout=1, retries=0)),
+        platform=Battlenet(
+            BattlenetSettings(), HttpClient(timeout=1, retries=0, connect_retries=0)
+        ),
         release=replace(battlenet.release, title_id="wow", region="Americas"),
     )
 
